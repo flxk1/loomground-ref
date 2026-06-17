@@ -74,6 +74,7 @@ class Patch:
         self.reservations = []   # {"kind","by","when"}
         self.prohibitions = []   # {"kind","when"}
         self.obligations = []    # {"obligation","gate"}
+        self.redress = []        # {"kind","by","overturn","within"}
         self.delegations = {}    # delegate -> delegator
 
 
@@ -166,10 +167,20 @@ def parse(text):
             if t[2] != "on":
                 raise Reject("parse", "obligation without on")
             p.obligations.append({"obligation": t[1], "gate": t[3]})
-        elif kw == "contest-notice":
-            if t[1] != "on":
-                raise Reject("parse", "contest-notice without on")
-            p.obligations.append({"obligation": "contest-notice", "gate": t[2]})
+        elif kw == "redress":
+            # redress <kind> by <role> [overturn] [within <duration>]
+            if len(t) < 4 or t[2] != "by":
+                raise Reject("parse", "redress without by")
+            entry = {"kind": t[1], "by": t[3], "overturn": False, "within": None}
+            i = 4
+            while i < len(t):
+                if t[i] == "overturn":
+                    entry["overturn"] = True; i += 1
+                elif t[i] == "within":
+                    entry["within"] = t[i + 1]; i += 2
+                else:
+                    raise Reject("parse", f"bad redress clause {t[i]!r}")
+            p.redress.append(entry)
         else:
             raise Reject("parse", f"unknown keyword {kw!r}")
     return p
@@ -269,6 +280,10 @@ def project(p):
             e["when"] = f'{g["field"]} {g["op"]} {g["val"]}'
         res.append(e)
     out = {"nodes": nodes, "cords": cords, "reservations": res}
+    if p.redress:
+        out["redress"] = [{"kind": r["kind"], "by": r["by"],
+                           "overturn": r["overturn"], "within": r["within"]}
+                          for r in p.redress]
     return out
 
 

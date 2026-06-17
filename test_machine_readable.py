@@ -99,7 +99,7 @@ check("manifest negative stages match reject.json", ok)
 
 # 8. grammar keywords cover the parser's statement keywords; all inputs parse-or-reject
 ebnf = open(p("grammar", "loomground.ebnf")).read()
-for kw in ["actor", "human", "gate", "cord", "reserve", "prohibit", "obligation", "contest-notice"]:
+for kw in ["actor", "human", "gate", "cord", "reserve", "prohibit", "obligation", "redress"]:
     check(f"grammar declares keyword '{kw}'", f'"{kw}"' in ebnf)
 parse_ok = True
 for f in glob.glob(p("conformance", "vectors", "*", "input.loom")) + [p("examples", "draft-decide.loom")]:
