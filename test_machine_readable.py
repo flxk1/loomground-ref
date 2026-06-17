@@ -101,6 +101,16 @@ check("manifest negative stages match reject.json", ok)
 ebnf = open(p("grammar", "loomground.ebnf")).read()
 for kw in ["actor", "human", "gate", "cord", "reserve", "prohibit", "obligation", "redress"]:
     check(f"grammar declares keyword '{kw}'", f'"{kw}"' in ebnf)
+
+# 8b. the agent guide (llms.txt) stays in sync with the language
+guide = open(p("llms.txt")).read()
+for n in ["actor", "human", "gate", "master"]:
+    check(f"llms.txt covers node '{n}'", n in guide)
+for v in ["auto", "human", "refused", "reserved", "prohibited"]:
+    check(f"llms.txt covers verdict '{v}'", v in guide)
+for kw in ["reserve", "quorum", "prohibit", "temporal", "obligation", "redress", "party", "delegation"]:
+    check(f"llms.txt covers declaration '{kw}'", kw in guide)
+
 parse_ok = True
 for f in glob.glob(p("conformance", "vectors", "*", "input.loom")) + [p("examples", "draft-decide.loom")]:
     try:
