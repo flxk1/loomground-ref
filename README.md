@@ -25,3 +25,9 @@ Zero dependencies; Python 3.10+.
 Passes all 13 v0.5 conformance vectors. Being an *independent* second
 implementation that passes the suite is the interoperability bar the
 specification's Conformance section describes.
+
+## Provenance
+This implementation was written with AI assistance (Claude, Anthropic) under
+human direction. The human author makes the decisions and is responsible for the
+content; the AI was used as a drafting and review tool. The commit history records
+this per change via `Co-Authored-By` trailers.
