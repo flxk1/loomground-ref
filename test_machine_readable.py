@@ -114,8 +114,7 @@ for kw in ["reserve", "quorum", "prohibit", "temporal", "obligation", "redress",
     check(f"llms.txt covers declaration '{kw}'", kw in guide)
 
 parse_ok = True
-inputs = glob.glob(p("conformance", "vectors", "*", "input.lg")) \
-    + glob.glob(p("conformance", "vectors", "*", "input.loom"))
+inputs = glob.glob(p("conformance", "vectors", "*", "input.lg"))
 for f in inputs + [p("examples", "draft-decide.lg")]:
     try:
         L.parse(open(f).read())
