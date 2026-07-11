@@ -10,8 +10,9 @@ import os
 import sys
 from jsonschema import Draft202012Validator as V
 import loomground as L
+from verify import find_standard_root
 
-STD = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "loomground"))
+STD = find_standard_root(sys.argv[1] if len(sys.argv) > 1 else None)
 def p(*a): return os.path.join(STD, *a)
 def jl(*a): return json.load(open(p(*a)))
 
@@ -30,7 +31,7 @@ def to_ir(patch):
     for nid in patch.order:
         d = patch.nodes[nid]
         e = {"id": nid, "class": d["class"]}
-        for k in ("role", "party", "risk_floor"):
+        for k in ("role", "party", "risk_floor", "grade", "grade_required"):
             if k in d:
                 e[k] = d[k]
         if nid in patch.delegations:
@@ -47,9 +48,10 @@ def to_ir(patch):
                 it["risks"] = sorted(spec["risks"])
             grants.append(it)
     return {"nodes": nodes, "grants": grants,
-            "cords": [{"from": f, "to": t, "type": ty} for f, t, ty in patch.cords],
+            "cords": [{"from": f, "to": t, "type": ty} for f, t, ty in patch.cords_typed],
             "reservations": [{"kind": r["kind"], "by": r["by"]} for r in patch.reservations],
-            "prohibitions": patch.prohibitions, "obligations": patch.obligations}
+            "prohibitions": [{k: v for k, v in pr.items() if v} for pr in patch.prohibitions],
+            "obligations": patch.obligations}
 
 
 # 1. every schema is itself a valid JSON Schema
@@ -69,7 +71,7 @@ mism = [c for c in tv if tok.is_valid(c["token"]) != c["valid"]]
 check("token schema agrees with token-validation flags", not mism, mism)
 
 # 4. patch schema validates a real patch IR (emitted from the example)
-patch = L.check(L.parse(open(p("examples", "draft-decide.loom")).read()))
+patch = L.check(L.parse(open(p("examples", "draft-decide.lg")).read()))
 errs = list(V(jl("schema", "patch.schema.json")).iter_errors(to_ir(patch)))
 check("patch schema validates the example patch IR", not errs, errs[:1])
 
@@ -87,7 +89,7 @@ card = jl("language-card.json")
 check("card.nodes == node classes", set(card["nodes"]) == nc)
 check("card.verdicts == verdicts alphabet", card["verdicts"] == jl("vocabulary", "verdicts.json")["alphabet"])
 check("card.declarations == declarations vocab", set(card["declarations"]) == {d["name"] for d in jl("vocabulary", "declarations.json")})
-check("card.token == token schema required fields", set(card["token"]) == set(jl("schema", "token.schema.json")["required"]))
+check("card.token == token schema fields", set(card["token"]) == set(jl("schema", "token.schema.json")["properties"]))
 
 # 7. manifest matches the actual vectors
 man = jl("conformance", "manifest.json")
@@ -108,11 +110,13 @@ for n in ["actor", "human", "gate", "master"]:
     check(f"llms.txt covers node '{n}'", n in guide)
 for v in ["auto", "human", "refused", "reserved", "prohibited"]:
     check(f"llms.txt covers verdict '{v}'", v in guide)
-for kw in ["reserve", "quorum", "prohibit", "temporal", "obligation", "redress", "party", "delegation"]:
+for kw in ["reserve", "quorum", "prohibit", "temporal", "obligation", "redress", "party", "delegation", "grade", "on-behalf-of"]:
     check(f"llms.txt covers declaration '{kw}'", kw in guide)
 
 parse_ok = True
-for f in glob.glob(p("conformance", "vectors", "*", "input.loom")) + [p("examples", "draft-decide.loom")]:
+inputs = glob.glob(p("conformance", "vectors", "*", "input.lg")) \
+    + glob.glob(p("conformance", "vectors", "*", "input.loom"))
+for f in inputs + [p("examples", "draft-decide.lg")]:
     try:
         L.parse(open(f).read())
     except L.Reject as e:

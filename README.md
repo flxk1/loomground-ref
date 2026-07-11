@@ -2,29 +2,42 @@
 # loomground-ref
 
 An independent, stdlib-only **reference implementation** of the Loomground
-language, specification v0.5. It is a *host*: it realises the abstract semantics
+language, specification v0.7. It is a *host*: it realises the abstract semantics
 of the standard so the standard's conformance vectors can be machine-verified. It
 is **not** part of the standard — the standard is the spec, grammar, and vectors
 it conforms to (github.com/flxk1/loomground).
 
 ## What it does
-- `loomground.py` — parser (incl. rack expansion), well-formedness check, the
-  token validator, and the evaluator (verdict assignment, strictest-wins
-  propagation, the master deciding each egress path).
-- `verify.py` — runs every conformance vector through the implementation.
+- `loomground.py` — parser (incl. rack expansion), apply-stage well-formedness
+  (typed cords, pipe/on-behalf-of acyclicity, reachability, guard domain, grade
+  ladder, the delegation no-amplification invariant), the observation projection
+  (canonical form incl. principal-chain party resolution), the token validator,
+  and the evaluator (verdict assignment incl. the §7.1 grade comparison,
+  strictest-wins propagation, the ordered log trace, the master deciding each
+  egress path).
+- `verify.py` — runs every conformance vector, enumerated from the standard's
+  `conformance/manifest.json` (patch, negative, and token vectors; both
+  `input.lg` and the legacy `input.loom` are accepted).
+- `test_machine_readable.py` — cross-validates the standard's machine-readable
+  layer (schemas, vocabulary, language card, manifest, grammar, llms.txt)
+  against this implementation and the vector data (needs `jsonschema`).
 
 ## Run
 ```bash
-python3 verify.py                 # verify against ../loomground/conformance/vectors
-python3 verify.py PATH/TO/vectors # or a given vector set
-python3 verify.py --generate      # rewrite expected.json from the implementation
+python3 verify.py         # locate the standard next to this checkout, run all vectors
+python3 verify.py PATH    # or point at the standard's root (or set $LOOMGROUND_ROOT)
 ```
 Zero dependencies; Python 3.10+.
 
 ## Status
-Passes all 13 v0.5 conformance vectors. Being an *independent* second
-implementation that passes the suite is the interoperability bar the
-specification's Conformance section describes.
+Passes all 44 v0.7 conformance vectors — including the autonomy grades, the
+delegation/on-behalf-of principal chain with its no-amplification invariant
+(and its pinned empty-set corner), party inheritance along the chain, quorum
+and temporal reservations, redress, tag guards, and the ordered log trace.
+This fulfils the second half of the standard's §9 two-implementation
+interoperability criterion: two implementations, neither derived from the
+other, each reproduce every vector — RVND (a production host, tracked
+separately) is the other.
 
 ## Provenance
 This implementation was written with AI assistance (Claude, Anthropic) under
