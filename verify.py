@@ -8,8 +8,8 @@ Usage:  python3 verify.py [ROOT_OR_VECTORS_DIR]
 The standard is located from, in order: the argument (the standard's root, or
 its conformance/vectors directory), $LOOMGROUND_ROOT, or a sibling checkout
 named `loomground`/`Loomground` next to any ancestor of this file. Vectors are
-enumerated from conformance/manifest.json; both `input.lg` and the legacy
-`input.loom` are accepted.
+enumerated from conformance/manifest.json; the netlist extension is `input.lg`
+(the standard closed the `.loom` alias window at v0.7).
 """
 import json
 import os
@@ -44,10 +44,9 @@ def load(d, f):
 
 
 def input_path(d):
-    for name in ("input.lg", "input.loom"):
-        p = os.path.join(d, name)
-        if os.path.exists(p):
-            return p
+    p = os.path.join(d, "input.lg")
+    if os.path.exists(p):
+        return p
     return None
 
 

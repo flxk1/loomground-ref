@@ -16,8 +16,8 @@ it conforms to (github.com/flxk1/loomground).
   strictest-wins propagation, the ordered log trace, the master deciding each
   egress path).
 - `verify.py` — runs every conformance vector, enumerated from the standard's
-  `conformance/manifest.json` (patch, negative, and token vectors; both
-  `input.lg` and the legacy `input.loom` are accepted).
+  `conformance/manifest.json` (patch, negative, and token vectors; the netlist
+  extension is `input.lg` — the standard closed the `.loom` alias at v0.7).
 - `test_machine_readable.py` — cross-validates the standard's machine-readable
   layer (schemas, vocabulary, language card, manifest, grammar, llms.txt)
   against this implementation and the vector data (needs `jsonschema`).
