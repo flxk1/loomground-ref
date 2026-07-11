@@ -282,6 +282,10 @@ def check(p):
         for spec in gr.values():
             if spec["risks"] is not None and not spec["risks"] <= set(RISK):
                 raise Reject("apply", f"grant risk set outside the domain at {gate}")
+    # an obligation attaches to a declared gate (SYNTAX §3; spec v0.8)
+    for ob in p.obligations:
+        if p.nodes.get(ob["on"], {}).get("class") != "gate":
+            raise Reject("apply", f"obligation on undeclared gate {ob['on']}")
     # guards range over {kind, risk, party, tags} only — never id/provenance
     for r in p.reservations:
         _check_guard(r["when"])
