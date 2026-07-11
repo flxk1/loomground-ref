@@ -30,7 +30,9 @@ python3 verify.py PATH    # or point at the standard's root (or set $LOOMGROUND_
 Zero dependencies; Python 3.10+.
 
 ## Status
-Passes all 44 v0.7 conformance vectors — including the autonomy grades, the
+Passes all 47 conformance vectors (v0.8-draft suite, including the group-A
+negatives that pin rack-failure and obligation-gate rejection stages, one of
+which caught and fixed a real gap here) — including the autonomy grades, the
 delegation/on-behalf-of principal chain with its no-amplification invariant
 (and its pinned empty-set corner), party inheritance along the chain, quorum
 and temporal reservations, redress, tag guards, and the ordered log trace.
@@ -42,5 +44,9 @@ separately) is the other.
 ## Provenance
 This implementation was written with AI assistance (Claude, Anthropic) under
 human direction. The human author makes the decisions and is responsible for the
-content; the AI was used as a drafting and review tool. The commit history records
-this per change via `Co-Authored-By` trailers.
+content; the AI was used as a drafting and review tool. An assisted commit ends
+with the plain line "Assisted by Claude (Anthropic); not an author or copyright
+holder." — never an authorship or co-authorship trailer (enforced by the
+`commit-discipline` CI job; see `CLAUDE.md`). Commits made before this
+convention carried a `Co-Authored-By` trailer from tooling defaults; that
+trailer recorded no authorship claim and is superseded by this convention.
