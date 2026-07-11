@@ -42,11 +42,12 @@ other, each reproduce every vector — RVND (a production host, tracked
 separately) is the other.
 
 ## Provenance
-This implementation was written with AI assistance (Claude, Anthropic) under
+This implementation was written with AI assistance under
 human direction. The human author makes the decisions and is responsible for the
-content; the AI was used as a drafting and review tool. An assisted commit ends
-with the plain line "Assisted by Claude (Anthropic); not an author or copyright
-holder." — never an authorship or co-authorship trailer (enforced by the
-`commit-discipline` CI job; see `CLAUDE.md`). Commits made before this
+content; AI was used as a drafting and review tool. An assisted commit ends
+with a plain line naming the tool used — "Assisted by <tool> (<vendor>); not an
+author or copyright holder." — never an authorship or co-authorship trailer
+(enforced by the `commit-discipline` CI job). The commit history records which
+tool assisted each change; this document names none. Commits made before this
 convention carried a `Co-Authored-By` trailer from tooling defaults; that
 trailer recorded no authorship claim and is superseded by this convention.
