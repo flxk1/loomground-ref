@@ -13,8 +13,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.x"
+      # flxk1/loomground is private: cloning needs LOOMGROUND_READ_TOKEN (a
+      # fine-grained PAT with contents:read on that repo) in this repo's
+      # secrets. If the standard ever goes public, the anonymous fallback
+      # works and the secret can be deleted.
       - name: clone the Loomground standard
-        run: git clone --depth 1 https://github.com/flxk1/loomground.git /tmp/loomground
+        run: |
+          if [ -n "${{ secrets.LOOMGROUND_READ_TOKEN }}" ]; then
+            git clone --depth 1 "https://x-access-token:${{ secrets.LOOMGROUND_READ_TOKEN }}@github.com/flxk1/loomground.git" /tmp/loomground
+          else
+            git clone --depth 1 https://github.com/flxk1/loomground.git /tmp/loomground
+          fi
       - name: reproduce every conformance vector
         run: LOOMGROUND_ROOT=/tmp/loomground python3 verify.py
       - name: machine-readable layer cross-checks
