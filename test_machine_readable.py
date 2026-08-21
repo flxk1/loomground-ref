@@ -91,9 +91,15 @@ check("card.verdicts == verdicts alphabet", card["verdicts"] == jl("vocabulary",
 check("card.declarations == declarations vocab", set(card["declarations"]) == {d["name"] for d in jl("vocabulary", "declarations.json")})
 check("card.token == token schema fields", set(card["token"]) == set(jl("schema", "token.schema.json")["properties"]))
 
-# 7. manifest matches the actual vectors
+# 7. manifest matches the actual vectors. A vector dir is one that holds a
+# vector input (input.lg, or tokens.json for a token vector); any other
+# subdirectory is scratch, not a vector, and is not expected in the manifest.
 man = jl("conformance", "manifest.json")
-actual = sorted(n for n in os.listdir(p("conformance", "vectors")) if os.path.isdir(p("conformance", "vectors", n)))
+def _is_vector(n):
+    d = p("conformance", "vectors", n)
+    return os.path.isdir(d) and any(
+        os.path.exists(os.path.join(d, f)) for f in ("input.lg", "tokens.json"))
+actual = sorted(n for n in os.listdir(p("conformance", "vectors")) if _is_vector(n))
 check("manifest lists exactly the vector dirs", sorted(v["name"] for v in man["vectors"]) == actual)
 neg = {v["name"]: v.get("stage") for v in man["vectors"] if v["kind"] == "negative"}
 ok = all(s == json.load(open(p("conformance", "vectors", n, "reject.json")))["stage"] for n, s in neg.items())
@@ -101,16 +107,23 @@ check("manifest negative stages match reject.json", ok)
 
 # 8. grammar keywords cover the parser's statement keywords; all inputs parse-or-reject
 ebnf = open(p("grammar", "loomground.ebnf")).read()
-for kw in ["actor", "human", "gate", "cord", "reserve", "prohibit", "obligation", "redress"]:
+for kw in ["actor", "human", "gate", "cord", "reserve", "prohibit", "obligation", "redress", "transfer"]:
     check(f"grammar declares keyword '{kw}'", f'"{kw}"' in ebnf)
 
-# 8b. the agent guide (llms.txt) stays in sync with the language
-guide = open(p("llms.txt")).read()
+# 8b. the agent guide (llms.txt) stays in sync with the language. It is a
+# repo-level guide: at the standard root (flat v0.7 layout) or its parent
+# (governance keeps the standard bundle under standard/, llms.txt at repo root).
+_llms = p("llms.txt")
+if not os.path.exists(_llms):
+    _llms = os.path.join(STD, "..", "llms.txt")
+guide = open(_llms).read()
 for n in ["actor", "human", "gate", "master"]:
     check(f"llms.txt covers node '{n}'", n in guide)
 for v in ["auto", "human", "refused", "reserved", "prohibited"]:
     check(f"llms.txt covers verdict '{v}'", v in guide)
-for kw in ["reserve", "quorum", "prohibit", "temporal", "obligation", "redress", "party", "delegation", "grade", "on-behalf-of"]:
+for kw in ["reserve", "quorum", "prohibit", "temporal", "obligation", "redress", "party",
+           "delegation", "grade", "on-behalf-of", "mandate", "transfer", "consign",
+           "reversibility", "uncertainty"]:
     check(f"llms.txt covers declaration '{kw}'", kw in guide)
 
 parse_ok = True
