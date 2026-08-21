@@ -13,6 +13,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.x"
+      - name: install test dependencies
+        run: python3 -m pip install --quiet jsonschema
       # The standard is flxk1/loomground-governance; its machine-readable bundle
       # (spec, grammar, schema, conformance, vocabulary) lives under standard/.
       # The anonymous clone works while it is public; the LOOMGROUND_READ_TOKEN
