@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 The Loomground Authors
-"""A reference implementation of the Loomground language, v0.7.
+"""A reference implementation of the Loomground language, v0.10.0.
 
 Stdlib-only. A *host* that realises the abstract semantics of the specification
 so the conformance vectors can be machine-verified. It is not part of the
@@ -12,11 +12,19 @@ import re
 
 RISK = {"low": 0, "medium": 1, "high": 2, "critical": 3}
 FULL_RISK = frozenset(RISK)
-# default autonomy ladder (vocabulary/grades.json); the active ladder is policy
-GRADES = {"L0": 0, "L1": 1, "L2": 2, "L3": 3, "L4": 4}
+# default autonomy ladder (vocabulary/grades.json); the active ladder is policy.
+# v0.10.0 aligned the default levels to ISO/IEC 22989 §5.13 (L0..L6)
+GRADES = {"L0": 0, "L1": 1, "L2": 2, "L3": 3, "L4": 4, "L5": 5, "L6": 6}
 # restrictiveness chain: auto ⊑ human ⊑ refused ⊑ reserved ⊑ prohibited
 VERDICT = {"auto": 0, "human": 1, "refused": 2, "reserved": 3, "prohibited": 4}
-GUARD_OPS = {"kind": {"="}, "party": {"="}, "risk": {">=", "="}, "tags": {"contains"}}
+# ordered, declared token properties (vocabulary/*.json); like risk, the value is
+# host-supplied and the language only compares it (spec §4, §6)
+REVERSIBILITY = {"reversible": 0, "compensable": 1, "irreversible": 2}
+UNCERTAINTY = {"settled": 0, "contested": 1, "unknown": 2}
+ORDERED = {"risk": RISK, "reversibility": REVERSIBILITY, "uncertainty": UNCERTAINTY}
+GUARD_OPS = {"kind": {"="}, "party": {"="}, "risk": {">=", "="},
+             "reversibility": {">=", "="}, "uncertainty": {">=", "="},
+             "tags": {"contains"}}
 
 
 class Reject(Exception):
@@ -80,6 +88,7 @@ class Patch:
         self.prohibitions = []   # {"kind","when"}
         self.obligations = []    # {"obligation","on"}
         self.redress = []        # {"kind","by","overturn","within"}
+        self.transfers = []      # {"kind","to","within"} policy-global (§6)
         self.obo = {}            # delegate -> [delegator, ...] (checked at apply)
         # populated by check():
         self.cords_typed = []    # projection order: grant conferrals, then written cords
@@ -130,6 +139,30 @@ def _target(rest):
     return rest[0], rest[1:]
 
 
+def _purpose_set(t, j):
+    """A `purpose set` (SYNTAX §3) starting at token index `j`: a single bare
+    purpose, or a brace set `{ p, ... }` (glued `{a,b}` or spaced). Returns
+    (set-of-purposes, next-index). The set is declared and never empty."""
+    if j >= len(t):
+        raise Reject("parse", "purpose set missing")
+    if not t[j].startswith("{"):
+        return {t[j]}, j + 1
+    buf, k = [], j
+    while k < len(t):
+        buf.append(t[k])
+        if "}" in t[k]:
+            break
+        k += 1
+    else:
+        raise Reject("parse", "purpose set missing closing brace")
+    s = " ".join(buf)
+    inner = s[s.index("{") + 1:s.rindex("}")]
+    purposes = {x.strip() for x in inner.split(",") if x.strip()}
+    if not purposes:
+        raise Reject("parse", "empty purpose set")
+    return purposes, k + 1
+
+
 def parse(text):
     raw = [l.split("#", 1)[0].rstrip() for l in text.splitlines()]
     raw = expand_racks(raw)
@@ -153,6 +186,10 @@ def _statement(p, line):
             if t[i] == "party": p.nodes[t[1]]["party"] = t[i + 1]; i += 2
             elif t[i] == "on-behalf-of": p.obo.setdefault(t[1], []).append(t[i + 1]); i += 2
             elif t[i] == "grade": p.nodes[t[1]]["grade"] = t[i + 1]; i += 2
+            elif t[i] == "mandate":                  # purpose set; ≤1 per actor (apply)
+                n = p.nodes[t[1]]
+                n["mandate"], i = _purpose_set(t, i + 1)
+                n["_mandate_count"] = n.get("_mandate_count", 0) + 1
             elif t[i] == "name": break               # name is text-to-eol
             else: raise Reject("parse", f"bad actor clause {t[i]!r}")
     elif kw == "human":
@@ -169,6 +206,7 @@ def _statement(p, line):
             elif t[i] == "grade": p.nodes[gid]["grade_required"] = t[i + 1]; i += 2
             elif t[i] == "party": p.nodes[gid]["party"] = t[i + 1]; i += 2
             elif t[i] == "name": p.nodes[gid]["name"] = t[i + 1]; i += 2
+            elif t[i] == "consign": p.nodes[gid]["consignee"] = t[i + 1]; i += 2
             elif t[i] == "grant":                    # MUST be last: consumes the rest
                 for gt in t[i + 1:]:
                     a, spec = _grant(gt)
@@ -227,6 +265,12 @@ def _statement(p, line):
             else:
                 raise Reject("parse", f"bad redress clause {t[i]!r}")
         p.redress.append(entry)
+    elif kw == "transfer":
+        # transfer <kind> to <consignee> within <purpose set>
+        if len(t) < 6 or t[2] != "to" or t[4] != "within":
+            raise Reject("parse", "transfer must be `transfer <kind> to <id> within <purposes>`")
+        purposes, _ = _purpose_set(t, 5)
+        p.transfers.append({"kind": t[1], "to": t[3], "within": purposes})
     else:
         raise Reject("parse", f"unknown keyword {kw!r}")
 
@@ -254,11 +298,12 @@ def _check_guard(g):
     if g is None:
         return
     if g["field"] not in GUARD_OPS:
-        raise Reject("apply", f"guard over {g['field']!r} (domain is kind/risk/party/tags)")
+        raise Reject("apply", f"guard over {g['field']!r} "
+                     "(domain is kind/risk/reversibility/uncertainty/party/tags)")
     if g["op"] not in GUARD_OPS[g["field"]]:
         raise Reject("apply", f"guard pairing {g['field']} {g['op']} is invalid")
-    if g["field"] == "risk" and g["val"] not in RISK:
-        raise Reject("apply", f"guard risk {g['val']!r} outside the domain")
+    if g["field"] in ORDERED and g["val"] not in ORDERED[g["field"]]:
+        raise Reject("apply", f"guard {g['field']} {g['val']!r} outside the domain")
 
 
 def _risk_set(spec, kind):
@@ -278,11 +323,13 @@ def check(p):
         for attr in ("grade", "grade_required"):
             if attr in n and n[attr] not in GRADES:
                 raise Reject("apply", f"grade {n[attr]!r} is not a level of the active ladder")
+        if n.get("_mandate_count", 0) > 1:                 # ≤1 mandate per actor (§6)
+            raise Reject("apply", f"actor {nid} declares more than one mandate")
     for gate, gr in p.grants.items():
         for spec in gr.values():
             if spec["risks"] is not None and not spec["risks"] <= set(RISK):
                 raise Reject("apply", f"grant risk set outside the domain at {gate}")
-    # an obligation attaches to a declared gate (SYNTAX §3; spec v0.8)
+    # an obligation attaches to a declared gate (SYNTAX §3; spec §6)
     for ob in p.obligations:
         if p.nodes.get(ob["on"], {}).get("class") != "gate":
             raise Reject("apply", f"obligation on undeclared gate {ob['on']}")
@@ -341,6 +388,29 @@ def check(p):
     for g, d in p.nodes.items():
         if d["class"] == "gate" and g not in reaches:
             raise Reject("apply", f"gate {g} on no path to master")
+    # consignment & transfer (§6): a consignee sits only on a terminal gate (one
+    # that egresses to master); a transfer names a declared consignee and its
+    # purposes stay within the mandate of every actor granted the transferred
+    # kind at a consigning gate (transfer-attenuation, the lateral mandate rule)
+    egress_gates = {f for f, t, ty in written if ty == "egress"}
+    consignees = set()
+    for nid, n in p.nodes.items():
+        if n.get("class") == "gate" and "consignee" in n:
+            consignees.add(n["consignee"])
+            if nid not in egress_gates:
+                raise Reject("apply", f"consignee on non-terminal gate {nid}")
+    for tr in p.transfers:
+        if tr["to"] not in consignees:
+            raise Reject("apply", f"transfer to undeclared consignee {tr['to']!r}")
+        for g, n in p.nodes.items():
+            if n.get("class") != "gate" or n.get("consignee") != tr["to"]:
+                continue
+            for actor, spec in p.grants.get(g, {}).items():
+                if spec["kinds"] is not None and tr["kind"] not in spec["kinds"]:
+                    continue
+                a_m = p.nodes.get(actor, {}).get("mandate") or set()
+                if not tr["within"] <= a_m:
+                    raise Reject("apply", f"transfer widens purpose beyond {actor}'s mandate")
     # on-behalf-of: at most one delegator, declared actor-or-human targets, acyclic
     for delegate, delegators in p.obo.items():
         if len(delegators) > 1:
@@ -364,6 +434,12 @@ def check(p):
         dg, lg = p.nodes[delegate].get("grade"), p.nodes[delegator].get("grade")
         if dg is not None and (lg is None or GRADES[dg] > GRADES[lg]):
             raise Reject("apply", f"delegation grade amplifies: {delegate} above {delegator}")
+        # mandate-attenuation: the delegate's mandate ⊆ its delegator's; a
+        # delegator with no mandate has the empty set, so the delegate must too
+        d_m = p.nodes[delegate].get("mandate") or set()
+        l_m = p.nodes[delegator].get("mandate") or set()
+        if not d_m <= l_m:
+            raise Reject("apply", f"delegation widens mandate: {delegate} beyond {delegator}")
         for gate, gr in p.grants.items():
             ds = gr.get(delegate)
             if ds is None:
@@ -407,7 +483,10 @@ def project(p):
         if "risk_floor" in d: e["risk_floor"] = d["risk_floor"]
         if "grade" in d: e["grade"] = d["grade"]
         if "grade_required" in d: e["grade_required"] = d["grade_required"]
+        if "consignee" in d: e["consignee"] = d["consignee"]
         if nid in p.delegations: e["on_behalf_of"] = p.delegations[nid]
+        if d["class"] == "actor" and "mandate" in d:
+            e["mandate"] = sorted(d["mandate"])   # a set, ascending lexicographic (§6)
         if d["class"] == "actor":
             party = _resolved_party(p, nid)
             if party is not None: e["party"] = party
@@ -426,6 +505,9 @@ def project(p):
             e["duration"] = r["duration"]; e["on_elapse"] = r["on_elapse"]
         res.append(e)
     out = {"nodes": nodes, "cords": cords, "reservations": res}
+    if p.transfers:
+        out["transfers"] = [{"kind": tr["kind"], "to": tr["to"],
+                             "within": sorted(tr["within"])} for tr in p.transfers]
     if p.redress:
         out["redress"] = [{"kind": r["kind"], "by": r["by"],
                            "overturn": r["overturn"], "within": r["within"]}
@@ -443,6 +525,12 @@ def _guard_holds(g, token, floored):
         return token.get("party") == g["val"]
     if g["field"] == "risk":
         return floored >= RISK[g["val"]] if g["op"] == ">=" else floored == RISK[g["val"]]
+    if g["field"] in ("reversibility", "uncertainty"):
+        dom = ORDERED[g["field"]]
+        tv = token.get(g["field"])
+        if tv not in dom:      # an absent/unknown ordered property matches no guard
+            return False
+        return dom[tv] >= dom[g["val"]] if g["op"] == ">=" else dom[tv] == dom[g["val"]]
     if g["field"] == "tags":
         return g["val"] in token.get("tags", [])
     return False

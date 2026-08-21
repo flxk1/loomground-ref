@@ -13,21 +13,21 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.x"
-      # flxk1/loomground is private: cloning needs LOOMGROUND_READ_TOKEN (a
-      # fine-grained PAT with contents:read on that repo) in this repo's
-      # secrets. If the standard ever goes public, the anonymous fallback
-      # works and the secret can be deleted.
+      # The standard is flxk1/loomground-governance; its machine-readable bundle
+      # (spec, grammar, schema, conformance, vocabulary) lives under standard/.
+      # The anonymous clone works while it is public; the LOOMGROUND_READ_TOKEN
+      # fallback (a fine-grained PAT with contents:read) covers it going private.
       - name: clone the Loomground standard
         run: |
           if [ -n "${{ secrets.LOOMGROUND_READ_TOKEN }}" ]; then
-            git clone --depth 1 "https://x-access-token:${{ secrets.LOOMGROUND_READ_TOKEN }}@github.com/flxk1/loomground.git" /tmp/loomground
+            git clone --depth 1 "https://x-access-token:${{ secrets.LOOMGROUND_READ_TOKEN }}@github.com/flxk1/loomground-governance.git" /tmp/loomground-governance
           else
-            git clone --depth 1 https://github.com/flxk1/loomground.git /tmp/loomground
+            git clone --depth 1 https://github.com/flxk1/loomground-governance.git /tmp/loomground-governance
           fi
       - name: reproduce every conformance vector
-        run: LOOMGROUND_ROOT=/tmp/loomground python3 verify.py
+        run: LOOMGROUND_ROOT=/tmp/loomground-governance/standard python3 verify.py
       - name: machine-readable layer cross-checks
-        run: LOOMGROUND_ROOT=/tmp/loomground python3 test_machine_readable.py
+        run: LOOMGROUND_ROOT=/tmp/loomground-governance/standard python3 test_machine_readable.py
 
   commit-discipline:
     runs-on: ubuntu-latest
