@@ -9,8 +9,11 @@ import json
 import os
 import sys
 from jsonschema import Draft202012Validator as V
-import loomground as L
-from verify import find_standard_root
+
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path[:0] = [_ROOT, os.path.join(_ROOT, "tools")]  # loomground.py at root, verify.py in tools/
+import loomground as L  # noqa: E402
+from verify import find_standard_root  # noqa: E402
 
 STD = find_standard_root(sys.argv[1] if len(sys.argv) > 1 else None)
 def p(*a): return os.path.join(STD, *a)

@@ -3,7 +3,7 @@
 # Copyright 2026 The Loomground Authors
 """Run the Loomground conformance vectors against the reference implementation.
 
-Usage:  python3 verify.py [ROOT_OR_VECTORS_DIR]
+Usage:  python3 tools/verify.py [ROOT_OR_VECTORS_DIR]
 
 The standard is located from, in order: the argument (the standard's root, or
 its conformance/vectors directory), $LOOMGROUND_ROOT, or a sibling checkout
@@ -14,9 +14,10 @@ enumerated from conformance/manifest.json; the netlist extension is `input.lg`
 import json
 import os
 import sys
-import loomground as L
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(HERE))  # loomground.py is the flat root module
+import loomground as L  # noqa: E402
 
 
 def find_standard_root(arg=None):

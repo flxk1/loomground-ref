@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "loomground-ref"
+version = "0.1.0"
+description = "Independent, stdlib-only reference implementation of the Loomground language."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSES/Apache-2.0.txt", "NOTICE"]
+authors = [{ name = "flxk1" }]
+dependencies = []
+
+[project.optional-dependencies]
+test = ["jsonschema"]
+
+[tool.setuptools]
+py-modules = ["loomground"]

@@ -1,0 +1,9 @@
+version = 1
+SPDX-PackageName = "loomground-ref"
+SPDX-PackageSupplier = "flxk1"
+
+[[annotations]]
+path = "**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 flxk1"
+SPDX-License-Identifier = "Apache-2.0"
