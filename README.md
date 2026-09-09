@@ -1,29 +1,40 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # loomground-ref
 
-Independent, stdlib-only reference implementation of the Loomground language
-(spec v0.10.0). A host that realises the standard's semantics so its conformance
-vectors are machine-verifiable. Not part of the standard
-(github.com/flxk1/loomground-governance).
+Stdlib-only reference implementation of the Loomground language; spec 0.10.0, 65/65 conformance vectors against standard 0.11.0.
 
-## Files
-- `loomground.py` — parse, apply-stage well-formedness, observation projection,
-  token validator, evaluator.
-- `tools/verify.py` — run every conformance vector from `conformance/manifest.json`.
-- `tests/test_machine_readable.py` — cross-check the standard's machine-readable layer
-  (schemas, vocabulary, card, manifest, grammar, llms.txt). Needs `jsonschema`.
+## Read
 
-## Run
-```bash
-python3 tools/verify.py [PATH]   # PATH = standard root, or set $LOOMGROUND_ROOT
+- `loomground.py` — parse, apply-stage check, projection, token validator, evaluator.
+- `tools/verify.py` — runs every vector listed in the standard's `conformance/manifest.json`.
+- The standard: https://github.com/flxk1/loomground-governance, directory `standard/`.
+
+## Usage
+
 ```
-Zero dependencies; Python 3.10+.
+git clone --depth 1 https://github.com/flxk1/loomground-governance /tmp/loomground-governance
+export LOOMGROUND_ROOT=/tmp/loomground-governance/standard
+python3 tools/verify.py                    # 65/65 vectors pass
+python3 tests/test_machine_readable.py     # 49/49 checks pass; needs jsonschema
+```
+
+## Contracts
+
+| | |
+|---|---|
+| input | the standard root: argument, `$LOOMGROUND_ROOT`, or a sibling checkout named `loomground` |
+| vector kinds | `patch`: `input.lg` + `expected.json` · `token`: `tokens.json` · `negative`: `input.lg` + `reject.json` with stage `parse` or `apply` |
+| API | `parse(text)` → `Patch` · `check(patch)` → patch or `Reject(stage)` · `project(patch)` → observation dict · `evaluate(patch, activations)` · `validate_token(token)` |
+| output | one PASS/FAIL line per vector; exit status 1 on any failure |
+
+## Family
+
+Independent reference implementation. Consumes: loomground-governance `standard/` (spec, grammar, schema, vocabulary, conformance vectors) · consumed by: the standard's conformance clause (two independent implementations; RVND is the other) · pipeline position: outside the reasoning pipeline. Implemented from the specification text, independently of RVND. Provenance: `docs/provenance.md`.
 
 ## Status
-- 62/62 conformance vectors, 49/49 machine-readable checks (governance v0.10.0).
-- §9 second independent implementation; RVND is the other.
 
-## Provenance
-AI-assisted, human-directed. Attribution rides the commit line
-(`Assisted by <tool> (<vendor>); not an author or copyright holder.`), enforced
-by `commit-discipline`. No AI authorship or co-authorship.
+Package 0.1.0 · implements spec 0.10.0 (`loomground.py`) · verified 2026-09-09 against loomground-governance 0.11.0: 65/65 conformance vectors (32 patch · 31 negative · 2 token), 49/49 machine-readable checks · Python >=3.10 · 0 runtime dependencies.
+
+## License
+
+Apache-2.0 · `LICENSES/Apache-2.0.txt` · `NOTICE`
