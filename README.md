@@ -9,13 +9,13 @@ vectors are machine-verifiable. Not part of the standard
 ## Files
 - `loomground.py` — parse, apply-stage well-formedness, observation projection,
   token validator, evaluator.
-- `verify.py` — run every conformance vector from `conformance/manifest.json`.
-- `test_machine_readable.py` — cross-check the standard's machine-readable layer
+- `tools/verify.py` — run every conformance vector from `conformance/manifest.json`.
+- `tests/test_machine_readable.py` — cross-check the standard's machine-readable layer
   (schemas, vocabulary, card, manifest, grammar, llms.txt). Needs `jsonschema`.
 
 ## Run
 ```bash
-python3 verify.py [PATH]   # PATH = standard root, or set $LOOMGROUND_ROOT
+python3 tools/verify.py [PATH]   # PATH = standard root, or set $LOOMGROUND_ROOT
 ```
 Zero dependencies; Python 3.10+.
 
