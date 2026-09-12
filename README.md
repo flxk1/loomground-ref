@@ -42,7 +42,7 @@ out:   [PASS] draft-decide
 
 ## Family
 
-Independent reference implementation. Consumes: loomground-governance `standard/` (spec, grammar, schema, vocabulary, conformance vectors) · consumed by: the standard's conformance clause (two independent implementations; RVND is the other) · pipeline position: outside the reasoning pipeline. Implemented from the specification text, independently of RVND. Provenance: `docs/provenance.md`.
+Independent reference implementation. Consumes: loomground-governance `standard/` (spec, grammar, schema, vocabulary, conformance vectors) · consumed by the standard's implementation-independence checks · pipeline position: outside the reasoning pipeline. Implemented from the specification text without importing another evaluator. Provenance: `docs/provenance.md`.
 
 ## Status
 
