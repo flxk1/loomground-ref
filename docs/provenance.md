@@ -22,7 +22,7 @@ Zero dependencies; Python 3.10+.
 
 ## Status
 - 62/62 conformance vectors, 49/49 machine-readable checks (governance v0.10.0).
-- §9 second independent implementation; RVND is the other.
+- §9 independent implementation criterion; conformance is checked from the published vectors.
 
 ## Provenance
 AI-assisted, human-directed. Attribution rides the commit line
