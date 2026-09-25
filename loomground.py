@@ -572,6 +572,9 @@ def evaluate(p, activations):
     results, log = {}, []
     for act in activations:
         actor, src, token = act["actor"], act["source"], act["token"]
+        # §4: an invalid token denotes ⊥ — no activation, no log entry
+        if not validate_token(token):
+            continue
         # gates activated: reachable from the source over pipes (incl. the source)
         reach, stack = set(), [src]
         while stack:
