@@ -17,7 +17,7 @@ A specification with one implementation is that implementation's behaviour. A se
 ```
 git clone --depth 1 https://github.com/flxk1/loomground-governance /tmp/loomground-governance
 export LOOMGROUND_ROOT=/tmp/loomground-governance/standard
-python3 tools/verify.py                    # 65/65 vectors pass
+python3 tools/verify.py                    # 69/69 vectors pass
 python3 tests/test_machine_readable.py     # 49/49 checks pass; needs jsonschema
 ```
 
@@ -28,7 +28,7 @@ out:   [PASS] draft-decide
        [PASS] draft-decide-run
        [PASS] multi-hop-pipeline
        …
-     65/65 vectors pass
+     69/69 vectors pass
 ```
 
 ## Contracts
