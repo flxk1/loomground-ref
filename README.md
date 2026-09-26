@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # loomground-ref
 
-Stdlib-only reference implementation of the Loomground language; spec 0.10.0, 65/65 conformance vectors against standard 0.11.0.
+Stdlib-only reference implementation of the Loomground language; spec 0.10.0, 69/69 conformance vectors against standard 0.11.0.
 
 ## Problem
 A specification with one implementation is that implementation's behaviour. A second, independent, stdlib-only implementation passing all vectors.
