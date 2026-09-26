@@ -60,6 +60,9 @@ def run_patch(d):
                 f"\n  want: {json.dumps(exp)}")
     tr = load(d, "transport.json")
     if tr is not None:
+        for act in tr["activations"]:
+            if act.get("invalid") and L.validate_token(act["token"]):
+                return f"FAIL mislabelled vector: invalid=true but token {act['token']!r} validates"
         res, log = L.evaluate(patch, tr["activations"])
         for g, w in tr.get("expected", {}).items():
             got = res.get(g, {})
