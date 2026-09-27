@@ -25,6 +25,6 @@ Zero dependencies; Python 3.10+.
 - §9 independent implementation criterion; conformance is checked from the published vectors.
 
 ## Provenance
-The code and documentation are written with Loomground agents running on Claude (Anthropic). The maintainer reads and corrects all of it.
+The code and documentation are written with Loomground agents. The maintainer reads and corrects all of it.
 No AI authorship or co-authorship: `commit-discipline` rejects AI co-author
 trailers.

@@ -50,7 +50,7 @@ Package 0.1.0 · implements spec 0.10.0 (`loomground.py`) · verified 2026-09-27
 
 ## How this is made
 
-The code and documentation are written with Loomground agents running on Claude (Anthropic). The maintainer reads and corrects all of it.
+The code and documentation are written with Loomground agents. The maintainer reads and corrects all of it.
 
 ## License
 
