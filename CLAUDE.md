@@ -20,8 +20,8 @@ Commit subjects are at most 72 characters. Both rules are enforced by the
 ## Verification (run before every commit)
 
 ```
-LOOMGROUND_ROOT=/path/to/Loomground python3 verify.py
-LOOMGROUND_ROOT=/path/to/Loomground python3 test_machine_readable.py
+LOOMGROUND_ROOT=/path/to/loomground-governance/standard python3 tools/verify.py
+LOOMGROUND_ROOT=/path/to/loomground-governance/standard python3 tests/test_machine_readable.py
 ```
 
 This repo is one of the Loomground standard's two independent implementations:
