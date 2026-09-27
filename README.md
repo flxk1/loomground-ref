@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # loomground-ref
 
-Stdlib-only reference implementation of the Loomground language; spec 0.10.0, 69/69 conformance vectors against standard 0.11.0.
+Stdlib-only reference implementation of the Loomground language; spec 0.10.0, 69/69 conformance vectors against standard 0.11.2.
 
 ## Problem
 A specification with one implementation is that implementation's behaviour. A second, independent, stdlib-only implementation passing all vectors.
@@ -37,7 +37,7 @@ out:   [PASS] draft-decide
 |---|---|
 | input | the standard root: argument, `$LOOMGROUND_ROOT`, or a sibling checkout named `loomground` |
 | vector kinds | `patch`: `input.lg` + `expected.json` · `token`: `tokens.json` · `negative`: `input.lg` + `reject.json` with stage `parse` or `apply` |
-| API | `parse(text)` → `Patch` · `check(patch)` → patch or `Reject(stage)` · `project(patch)` → observation dict · `evaluate(patch, activations)` · `validate_token(token)` |
+| API | `parse(text)` → `Patch` · `check(patch)` → patch, or raises `Reject(stage)` · `project(patch)` → observation dict · `evaluate(patch, activations)` · `validate_token(token)` |
 | output | one PASS/FAIL line per vector; exit status 1 on any failure |
 
 ## Family
@@ -46,7 +46,11 @@ Independent reference implementation. Consumes: loomground-governance `standard/
 
 ## Status
 
-Package 0.1.0 · implements spec 0.10.0 (`loomground.py`) · verified 2026-09-09 against loomground-governance 0.11.0: 65/65 conformance vectors (32 patch · 31 negative · 2 token), 49/49 machine-readable checks · Python >=3.10 · 0 runtime dependencies.
+Package 0.1.0 · implements spec 0.10.0 (`loomground.py`) · verified 2026-09-27 against loomground-governance 0.11.2: 69/69 conformance vectors (36 patch · 31 negative · 2 token), 49/49 machine-readable checks · Python >=3.10 · 0 runtime dependencies.
+
+## How this is made
+
+The code and documentation are written with Loomground agents. The maintainer reads and corrects all of it.
 
 ## License
 
