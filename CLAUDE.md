@@ -20,11 +20,15 @@ Commit subjects are at most 72 characters. Both rules are enforced by the
 ## Verification (run before every commit)
 
 ```
-LOOMGROUND_ROOT=/path/to/loomground-governance/standard python3 tools/verify.py
-LOOMGROUND_ROOT=/path/to/loomground-governance/standard python3 tests/test_machine_readable.py
+LOOMGROUND_ROOT=/path/to/loomground python3 tools/verify.py
+LOOMGROUND_ROOT=/path/to/loomground python3 tests/test_machine_readable.py
 ```
 
-This repo is one of the Loomground standard's two independent implementations:
+This repo is one of two existing implementations of the Loomground standard:
 every conformance vector must pass, stdlib-only, implemented from the spec text
-(never ported from another implementation — independence is what makes the
-two-implementation criterion mean something).
+(never ported from another implementation). That does not make the two
+implementations *independent* in the §9 sense: both were authored within the
+same AI-assisted project with no controlled isolation between them, so their
+agreement is differential verification, not an independence proof. The
+standard's own `conformance/README.md` (Status) states the §9 criterion is
+open; do not claim it is met in this repo's docs.

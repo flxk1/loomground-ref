@@ -28,9 +28,14 @@ GUARD_OPS = {"kind": {"="}, "party": {"="}, "risk": {">=", "="},
 
 
 class Reject(Exception):
-    def __init__(self, stage, msg):
-        super().__init__(f"{stage}: {msg}")
+    """A rejection carries the stage (parse|apply) and a reason code from the
+    closed set in vocabulary/reject-reasons.json — `reason` is None only for a
+    rejection no conformance vector exercises and the vocabulary does not name."""
+
+    def __init__(self, stage, reason, msg):
+        super().__init__(f"{stage}[{reason}]: {msg}")
         self.stage = stage
+        self.reason = reason
 
 
 # ---------------------------------------------------------------- rack pre-pass
@@ -45,7 +50,7 @@ def expand_racks(lines):
             while i < len(lines) and lines[i].strip() != "end":
                 body.append(lines[i]); i += 1
             if i >= len(lines):
-                raise Reject("parse", f"rack {name} missing end")
+                raise Reject("parse", 'PARSE_ERROR', f"rack {name} missing end")
             racks[name] = (params, body); i += 1; continue
         out.append(ln); i += 1
     prog, inst = [], {}
@@ -55,15 +60,15 @@ def expand_racks(lines):
             prog.append(ln); continue
         name = m.group(1)
         if name not in racks:
-            raise Reject("parse", f"unknown rack {name}")
+            raise Reject("parse", 'RACK_UNKNOWN', f"unknown rack {name}")
         params, body = racks[name]
         binds = {}
         for b in m.group(2).split(","):
             if "=" not in b:
-                raise Reject("parse", f"bad binding {b!r}")
+                raise Reject("parse", 'PARSE_ERROR', f"bad binding {b!r}")
             k, v = b.split("=", 1); binds[k.strip()] = v.strip()
         if set(binds) != set(params):
-            raise Reject("parse", f"rack {name} args {set(binds)} != params {set(params)}")
+            raise Reject("parse", 'RACK_ARITY', f"rack {name} args {set(binds)} != params {set(params)}")
         n = inst.get(name, 0); inst[name] = n + 1
         for bl in body:
             s = bl
@@ -71,7 +76,7 @@ def expand_racks(lines):
                 s = re.sub(r"\$" + re.escape(k) + r"\b", v, s)
             s = s.replace("$0", str(n))
             if "$" in s:
-                raise Reject("parse", f"undefined substitution in {bl!r}")
+                raise Reject("parse", 'PARSE_ERROR', f"undefined substitution in {bl!r}")
             prog.append(s)
     return prog
 
@@ -97,17 +102,17 @@ class Patch:
 def _guard(tokens):
     # generic <field> <op> <value>; the field domain and pairings are apply-checked
     if len(tokens) < 3:
-        raise Reject("parse", f"incomplete guard {tokens!r}")
+        raise Reject("parse", 'PARSE_ERROR', f"incomplete guard {tokens!r}")
     field, op, val = tokens[0], tokens[1], tokens[2]
     if op not in (">=", "=", "contains"):
-        raise Reject("parse", f"bad guard operator {op!r}")
+        raise Reject("parse", 'PARSE_ERROR', f"bad guard operator {op!r}")
     return {"field": field, "op": op, "val": val}, tokens[3:]
 
 
 def _grant(tok):
     m = re.match(r"^([\w-]+)(?:\[([^\]]*)\])?$", tok)
     if not m:
-        raise Reject("parse", f"bad grant {tok!r}")
+        raise Reject("parse", 'PARSE_ERROR', f"bad grant {tok!r}")
     actor, inner = m.group(1), m.group(2)
     kinds = risks = None
     if inner is not None:
@@ -123,17 +128,17 @@ def _target(rest):
     # target = role | role and role | <m> of { role, role }  ->  canonical string
     if len(rest) >= 2 and rest[0].isdigit() and rest[1] == "of":
         if len(rest) < 3 or rest[2] != "{":
-            raise Reject("parse", "m-of-n target without {")
+            raise Reject("parse", 'PARSE_ERROR', "m-of-n target without {")
         roles, i = [], 3
         while i < len(rest) and rest[i] != "}":
             if rest[i] != ",":
                 roles.append(rest[i])
             i += 1
         if i >= len(rest) or not roles:
-            raise Reject("parse", "unterminated m-of-n target")
+            raise Reject("parse", 'PARSE_ERROR', "unterminated m-of-n target")
         return f"{rest[0]} of {{{', '.join(roles)}}}", rest[i + 1:]
     if not rest:
-        raise Reject("parse", "missing target")
+        raise Reject("parse", 'PARSE_ERROR', "missing target")
     if len(rest) >= 3 and rest[1] == "and":
         return f"{rest[0]} and {rest[2]}", rest[3:]
     return rest[0], rest[1:]
@@ -144,7 +149,7 @@ def _purpose_set(t, j):
     purpose, or a brace set `{ p, ... }` (glued `{a,b}` or spaced). Returns
     (set-of-purposes, next-index). The set is declared and never empty."""
     if j >= len(t):
-        raise Reject("parse", "purpose set missing")
+        raise Reject("parse", 'PARSE_ERROR', "purpose set missing")
     if not t[j].startswith("{"):
         return {t[j]}, j + 1
     buf, k = [], j
@@ -154,12 +159,12 @@ def _purpose_set(t, j):
             break
         k += 1
     else:
-        raise Reject("parse", "purpose set missing closing brace")
+        raise Reject("parse", 'PARSE_ERROR', "purpose set missing closing brace")
     s = " ".join(buf)
     inner = s[s.index("{") + 1:s.rindex("}")]
     purposes = {x.strip() for x in inner.split(",") if x.strip()}
     if not purposes:
-        raise Reject("parse", "empty purpose set")
+        raise Reject("parse", 'PARSE_ERROR', "empty purpose set")
     return purposes, k + 1
 
 
@@ -171,7 +176,7 @@ def parse(text):
         for line in raw:
             _statement(p, line)
     except IndexError:
-        raise Reject("parse", f"truncated statement {line!r}")
+        raise Reject("parse", 'PARSE_ERROR', f"truncated statement {line!r}")
     return p
 
 
@@ -191,13 +196,13 @@ def _statement(p, line):
                 n["mandate"], i = _purpose_set(t, i + 1)
                 n["_mandate_count"] = n.get("_mandate_count", 0) + 1
             elif t[i] == "name": break               # name is text-to-eol
-            else: raise Reject("parse", f"bad actor clause {t[i]!r}")
+            else: raise Reject("parse", 'PARSE_ERROR', f"bad actor clause {t[i]!r}")
     elif kw == "human":
         p.nodes[t[1]] = {"class": "human"}; p.order.append(t[1]); i = 2
         while i < len(t):
             if t[i] == "role": p.nodes[t[1]]["role"] = t[i + 1]; i += 2
             elif t[i] == "name": break
-            else: raise Reject("parse", f"bad human clause {t[i]!r}")
+            else: raise Reject("parse", 'PARSE_ERROR', f"bad human clause {t[i]!r}")
     elif kw == "gate":
         gid = t[1]; p.nodes[gid] = {"class": "gate"}; p.order.append(gid)
         p.grants.setdefault(gid, {}); i = 2
@@ -213,14 +218,14 @@ def _statement(p, line):
                     p.grants[gid][a] = spec
                     p.grant_order.append((a, gid))
                 break
-            else: raise Reject("parse", f"bad gate clause {t[i]!r}")
+            else: raise Reject("parse", 'PARSE_ERROR', f"bad gate clause {t[i]!r}")
     elif kw == "cord":
         if len(t) != 4 or t[2] != "->":
-            raise Reject("parse", "cord must be `cord <endpoint> -> <endpoint>`")
+            raise Reject("parse", 'PARSE_ERROR', "cord must be `cord <endpoint> -> <endpoint>`")
         p.cords.append((t[1], t[3]))
     elif kw == "reserve":
         if len(t) < 4 or t[2] != "by":
-            raise Reject("parse", "reserve without by")
+            raise Reject("parse", 'PARSE_ERROR', "reserve without by")
         # separate {, }, , and : so a quorum target and a temporal window tokenize
         rest = " ".join(t[3:])
         rest = re.sub(r"([{},:])", r" \1 ", rest).split()
@@ -231,30 +236,30 @@ def _statement(p, line):
                 entry["when"], rest = _guard(rest[1:])
             elif rest[0] == "duration":
                 if len(rest) < 4 or rest[2] != ":":
-                    raise Reject("parse", "duration without `<duration> : <on-elapse>`")
+                    raise Reject("parse", 'PARSE_ERROR', "duration without `<duration> : <on-elapse>`")
                 if rest[3] not in ("halt", "proceed"):
-                    raise Reject("parse", f"bad on-elapse {rest[3]!r}")
+                    raise Reject("parse", 'PARSE_ERROR', f"bad on-elapse {rest[3]!r}")
                 entry["duration"], entry["on_elapse"] = rest[1], rest[3]
                 rest = rest[4:]
             else:
-                raise Reject("parse", f"bad reserve clause {rest[0]!r}")
+                raise Reject("parse", 'PARSE_ERROR', f"bad reserve clause {rest[0]!r}")
         p.reservations.append(entry)
     elif kw == "prohibit":
         entry = {"kind": t[1], "when": None}
         if len(t) > 2:
             if t[2] != "when":
-                raise Reject("parse", f"bad prohibit clause {t[2]!r}")
+                raise Reject("parse", 'PARSE_ERROR', f"bad prohibit clause {t[2]!r}")
             entry["when"], extra = _guard(t[3:])
             if extra:
-                raise Reject("parse", f"trailing tokens {extra!r}")
+                raise Reject("parse", 'PARSE_ERROR', f"trailing tokens {extra!r}")
         p.prohibitions.append(entry)
     elif kw == "obligation":
         if len(t) != 4 or t[2] != "on":
-            raise Reject("parse", "obligation must be `obligation <obligation> on <gate>`")
+            raise Reject("parse", 'PARSE_ERROR', "obligation must be `obligation <obligation> on <gate>`")
         p.obligations.append({"obligation": t[1], "on": t[3]})
     elif kw == "redress":
         if len(t) < 4 or t[2] != "by":
-            raise Reject("parse", "redress without by")
+            raise Reject("parse", 'PARSE_ERROR', "redress without by")
         entry = {"kind": t[1], "by": t[3], "overturn": False, "within": None}
         i = 4
         while i < len(t):
@@ -263,47 +268,53 @@ def _statement(p, line):
             elif t[i] == "within":
                 entry["within"] = t[i + 1]; i += 2
             else:
-                raise Reject("parse", f"bad redress clause {t[i]!r}")
+                raise Reject("parse", 'PARSE_ERROR', f"bad redress clause {t[i]!r}")
         p.redress.append(entry)
     elif kw == "transfer":
         # transfer <kind> to <consignee> within <purpose set>
         if len(t) < 6 or t[2] != "to" or t[4] != "within":
-            raise Reject("parse", "transfer must be `transfer <kind> to <id> within <purposes>`")
+            raise Reject("parse", 'PARSE_ERROR', "transfer must be `transfer <kind> to <id> within <purposes>`")
         purposes, _ = _purpose_set(t, 5)
         p.transfers.append({"kind": t[1], "to": t[3], "within": purposes})
     else:
-        raise Reject("parse", f"unknown keyword {kw!r}")
+        raise Reject("parse", 'PARSE_ERROR', f"unknown keyword {kw!r}")
 
 
 # ------------------------------------------------------------- well-formedness
 def cord_type(p, frm, to):
     if to == "master":
         if p.nodes.get(frm, {}).get("class") != "gate":
-            raise Reject("apply", f"only a gate may egress to master ({frm})")
+            raise Reject("apply", 'NON_CONFORMING_CORD', f"only a gate may egress to master ({frm})")
         return "egress"
     cf = p.nodes.get(frm, {}).get("class")
     ct = p.nodes.get(to, {}).get("class")
     if cf is None or ct is None:
-        raise Reject("apply", f"cord into undeclared node {frm}->{to}")
+        raise Reject("apply", 'UNDECLARED_NODE', f"cord into undeclared node {frm}->{to}")
     if cf == "human" or ct == "human":
-        raise Reject("apply", "a human may not be a cord endpoint")
+        raise Reject("apply", 'NON_CONFORMING_CORD', "a human may not be a cord endpoint")
     if cf == "actor" and ct == "gate":
         return "authority"
     if cf == "gate" and ct == "gate":
         return "pipe"
-    raise Reject("apply", f"illegal cord {cf}->{ct}")
+    raise Reject("apply", 'NON_CONFORMING_CORD', f"illegal cord {cf}->{ct}")
 
 
 def _check_guard(g):
     if g is None:
         return
     if g["field"] not in GUARD_OPS:
-        raise Reject("apply", f"guard over {g['field']!r} "
+        raise Reject("apply", "GUARD_DOMAIN_VIOLATION",
+                     f"guard over {g['field']!r} "
                      "(domain is kind/risk/reversibility/uncertainty/party/tags)")
     if g["op"] not in GUARD_OPS[g["field"]]:
-        raise Reject("apply", f"guard pairing {g['field']} {g['op']} is invalid")
+        raise Reject("apply", "GUARD_PAIRING_INVALID", f"guard pairing {g['field']} {g['op']} is invalid")
     if g["field"] in ORDERED and g["val"] not in ORDERED[g["field"]]:
-        raise Reject("apply", f"guard {g['field']} {g['val']!r} outside the domain")
+        # risk/reversibility have dedicated out-of-domain codes; uncertainty has
+        # none in the closed set (vocabulary/reject-reasons.json) and no vector
+        # exercises it, so it falls back to the domain-violation code.
+        reason = {"risk": "RISK_OUT_OF_DOMAIN",
+                  "reversibility": "REVERSIBILITY_OUT_OF_DOMAIN"}.get(g["field"], "GUARD_DOMAIN_VIOLATION")
+        raise Reject("apply", reason, f"guard {g['field']} {g['val']!r} outside the domain")
 
 
 def _risk_set(spec, kind):
@@ -319,20 +330,20 @@ def check(p):
     # declared values in their domains
     for nid, n in p.nodes.items():
         if "risk_floor" in n and n["risk_floor"] not in RISK:
-            raise Reject("apply", f"unknown risk {n['risk_floor']}")
+            raise Reject("apply", 'RISK_OUT_OF_DOMAIN', f"unknown risk {n['risk_floor']}")
         for attr in ("grade", "grade_required"):
             if attr in n and n[attr] not in GRADES:
-                raise Reject("apply", f"grade {n[attr]!r} is not a level of the active ladder")
+                raise Reject("apply", 'GRADE_OUT_OF_DOMAIN', f"grade {n[attr]!r} is not a level of the active ladder")
         if n.get("_mandate_count", 0) > 1:                 # ≤1 mandate per actor (§6)
-            raise Reject("apply", f"actor {nid} declares more than one mandate")
+            raise Reject("apply", 'MANDATE_DUPLICATE', f"actor {nid} declares more than one mandate")
     for gate, gr in p.grants.items():
         for spec in gr.values():
             if spec["risks"] is not None and not spec["risks"] <= set(RISK):
-                raise Reject("apply", f"grant risk set outside the domain at {gate}")
+                raise Reject("apply", 'RISK_OUT_OF_DOMAIN', f"grant risk set outside the domain at {gate}")
     # an obligation attaches to a declared gate (SYNTAX §3; spec §6)
     for ob in p.obligations:
         if p.nodes.get(ob["on"], {}).get("class") != "gate":
-            raise Reject("apply", f"obligation on undeclared gate {ob['on']}")
+            raise Reject("apply", 'UNDECLARED_NODE', f"obligation on undeclared gate {ob['on']}")
     # guards range over {kind, risk, party, tags} only — never id/provenance
     for r in p.reservations:
         _check_guard(r["when"])
@@ -365,7 +376,7 @@ def check(p):
         col[u] = GREY
         for v in succ.get(u, []):
             if col.get(v, WHITE) == GREY:
-                raise Reject("apply", "pipe cycle")
+                raise Reject("apply", 'PIPE_CYCLE', "pipe cycle")
             if col.get(v, WHITE) == WHITE:
                 dfs(v)
         col[u] = BLACK
@@ -376,7 +387,7 @@ def check(p):
     piped_into = {t for _, t in pipes}
     for g in piped_into:
         if "grade_required" in p.nodes.get(g, {}):
-            raise Reject("apply", f"required grade on piped (non-source) gate {g}")
+            raise Reject("apply", None, f"required grade on piped (non-source) gate {g}")
     # reachability: every gate on a pipe∪egress path to master
     reaches = {f for f, t, ty in written if ty == "egress"}
     changed = True
@@ -387,7 +398,7 @@ def check(p):
                 reaches.add(f); changed = True
     for g, d in p.nodes.items():
         if d["class"] == "gate" and g not in reaches:
-            raise Reject("apply", f"gate {g} on no path to master")
+            raise Reject("apply", None, f"gate {g} on no path to master")
     # consignment & transfer (§6): a consignee sits only on a terminal gate (one
     # that egresses to master); a transfer names a declared consignee and its
     # purposes stay within the mandate of every actor granted the transferred
@@ -398,10 +409,10 @@ def check(p):
         if n.get("class") == "gate" and "consignee" in n:
             consignees.add(n["consignee"])
             if nid not in egress_gates:
-                raise Reject("apply", f"consignee on non-terminal gate {nid}")
+                raise Reject("apply", 'CONSIGNEE_NOT_TERMINAL', f"consignee on non-terminal gate {nid}")
     for tr in p.transfers:
         if tr["to"] not in consignees:
-            raise Reject("apply", f"transfer to undeclared consignee {tr['to']!r}")
+            raise Reject("apply", 'TRANSFER_DANGLING_CONSIGNEE', f"transfer to undeclared consignee {tr['to']!r}")
         for g, n in p.nodes.items():
             if n.get("class") != "gate" or n.get("consignee") != tr["to"]:
                 continue
@@ -410,20 +421,20 @@ def check(p):
                     continue
                 a_m = p.nodes.get(actor, {}).get("mandate") or set()
                 if not tr["within"] <= a_m:
-                    raise Reject("apply", f"transfer widens purpose beyond {actor}'s mandate")
+                    raise Reject("apply", 'TRANSFER_WIDENING', f"transfer widens purpose beyond {actor}'s mandate")
     # on-behalf-of: at most one delegator, declared actor-or-human targets, acyclic
     for delegate, delegators in p.obo.items():
         if len(delegators) > 1:
-            raise Reject("apply", f"{delegate} declares more than one delegator")
+            raise Reject("apply", 'OBO_DUPLICATE_DELEGATOR', f"{delegate} declares more than one delegator")
         cls = p.nodes.get(delegators[0], {}).get("class")
         if cls not in ("actor", "human"):
-            raise Reject("apply", f"on-behalf-of names {delegators[0]!r}, not a declared actor or human")
+            raise Reject("apply", 'UNDECLARED_NODE', f"on-behalf-of names {delegators[0]!r}, not a declared actor or human")
     p.delegations = {d: ds[0] for d, ds in p.obo.items()}
     for start in p.delegations:
         seen, cur = set(), start
         while cur in p.delegations:
             if cur in seen:
-                raise Reject("apply", "cycle in the on-behalf-of relation")
+                raise Reject("apply", 'OBO_CYCLE', "cycle in the on-behalf-of relation")
             seen.add(cur)
             cur = p.delegations[cur]
     # no-amplification, pairwise over actor→actor links only (a human delegator
@@ -433,13 +444,13 @@ def check(p):
             continue
         dg, lg = p.nodes[delegate].get("grade"), p.nodes[delegator].get("grade")
         if dg is not None and (lg is None or GRADES[dg] > GRADES[lg]):
-            raise Reject("apply", f"delegation grade amplifies: {delegate} above {delegator}")
+            raise Reject("apply", 'GRADE_AMPLIFICATION', f"delegation grade amplifies: {delegate} above {delegator}")
         # mandate-attenuation: the delegate's mandate ⊆ its delegator's; a
         # delegator with no mandate has the empty set, so the delegate must too
         d_m = p.nodes[delegate].get("mandate") or set()
         l_m = p.nodes[delegator].get("mandate") or set()
         if not d_m <= l_m:
-            raise Reject("apply", f"delegation widens mandate: {delegate} beyond {delegator}")
+            raise Reject("apply", 'MANDATE_WIDENING', f"delegation widens mandate: {delegate} beyond {delegator}")
         for gate, gr in p.grants.items():
             ds = gr.get(delegate)
             if ds is None:
@@ -448,7 +459,7 @@ def check(p):
             kinds = ds["kinds"]
             if kinds is None:              # granted over all kinds
                 if ls is None or ls["kinds"] is not None:
-                    raise Reject("apply", f"delegate {delegate} granted at {gate} beyond {delegator}")
+                    raise Reject("apply", 'RISK_AMPLIFICATION', f"delegate {delegate} granted at {gate} beyond {delegator}")
                 kinds = {None}             # compare unnarrowed risk sets directly
             for k in kinds:
                 if k is None:   # both grants unnarrowed over kind
@@ -457,7 +468,7 @@ def check(p):
                 else:
                     dset, lset = _risk_set(ds, k), _risk_set(ls, k)
                 if not dset <= lset:
-                    raise Reject("apply", f"delegation amplifies risk over {k or 'any kind'} at {gate}")
+                    raise Reject("apply", 'RISK_AMPLIFICATION', f"delegation amplifies risk over {k or 'any kind'} at {gate}")
     return p
 
 
@@ -609,7 +620,17 @@ def evaluate(p, activations):
             ready.sort(key=decl_pos.get)
         for g in ordered:
             verdict = effective(g)
-            log.append({"gate": g, "verdict": verdict})
+            entry_log = {"gate": g, "verdict": verdict}
+            # record (SPEC §7.4): a log entry carries the declared token and the
+            # host-observed facts only where they diverge from what was declared
+            # (a gate's own risk floor may raise the effective risk above the
+            # token's declared value); most vectors coincide and omit both.
+            floored = max(RISK[token["risk"]], RISK.get(p.nodes[g].get("risk_floor"), -1))
+            observed_risk = [k for k, v in RISK.items() if v == floored][0]
+            if observed_risk != token["risk"]:
+                entry_log["token"] = token
+                entry_log["observed"] = {"kind": token["kind"], "risk": observed_risk}
+            log.append(entry_log)
             entry = results.setdefault(g, {})
             entry["verdict"] = verdict
             if g in egress:

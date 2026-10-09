@@ -15,21 +15,23 @@ jobs:
           python-version: "3.x"
       - name: install test dependencies
         run: python3 -m pip install --quiet jsonschema
-      # The standard is flxk1/loomground-governance; its machine-readable bundle
-      # (spec, grammar, schema, conformance, vocabulary) lives under standard/.
-      # The anonymous clone works while it is public; the LOOMGROUND_READ_TOKEN
-      # fallback (a fine-grained PAT with contents:read) covers it going private.
+      # The standard is flxk1/loomground (renamed from loomground-governance);
+      # its machine-readable bundle (spec, grammar, schema, conformance,
+      # vocabulary) lives at the repo root, not under standard/ (the flat
+      # layout since the rename). The anonymous clone works while it is
+      # public; the LOOMGROUND_READ_TOKEN fallback (a fine-grained PAT with
+      # contents:read) covers it going private.
       - name: clone the Loomground standard
         run: |
           if [ -n "${{ secrets.LOOMGROUND_READ_TOKEN }}" ]; then
-            git clone --depth 1 "https://x-access-token:${{ secrets.LOOMGROUND_READ_TOKEN }}@github.com/flxk1/loomground-governance.git" /tmp/loomground-governance
+            git clone --depth 1 "https://x-access-token:${{ secrets.LOOMGROUND_READ_TOKEN }}@github.com/flxk1/loomground.git" /tmp/loomground
           else
-            git clone --depth 1 https://github.com/flxk1/loomground-governance.git /tmp/loomground-governance
+            git clone --depth 1 https://github.com/flxk1/loomground.git /tmp/loomground
           fi
       - name: reproduce every conformance vector
-        run: LOOMGROUND_ROOT=/tmp/loomground-governance/standard python3 tools/verify.py
+        run: LOOMGROUND_ROOT=/tmp/loomground python3 tools/verify.py
       - name: machine-readable layer cross-checks
-        run: LOOMGROUND_ROOT=/tmp/loomground-governance/standard python3 tests/test_machine_readable.py
+        run: LOOMGROUND_ROOT=/tmp/loomground python3 tests/test_machine_readable.py
 
   commit-discipline:
     runs-on: ubuntu-latest
