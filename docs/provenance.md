@@ -1,11 +1,14 @@
 # loomground-ref — provenance and prior status
 
 Moved verbatim from README.md (2026-09-09, README canon). Reference material; the README carries the contract.
+"Independent" below describes this file alone: written from the specification text, not ported
+from another evaluator. It is not a claim of §9 two-implementation independence — that criterion is
+open (README.md, Status).
 
-Independent, stdlib-only reference implementation of the Loomground language
+Stdlib-only reference implementation of the Loomground language
 (spec v0.10.0). A host that realises the standard's semantics so its conformance
 vectors are machine-verifiable. Not part of the standard
-(github.com/flxk1/loomground-governance).
+(github.com/flxk1/loomground).
 
 ## Files
 - `loomground.py` — parse, apply-stage well-formedness, observation projection,
@@ -21,8 +24,11 @@ python3 tools/verify.py [PATH]   # PATH = standard root, or set $LOOMGROUND_ROOT
 Zero dependencies; Python 3.10+.
 
 ## Status
-- 62/62 conformance vectors, 49/49 machine-readable checks (governance v0.10.0).
-- §9 independent implementation criterion; conformance is checked from the published vectors.
+- 74/74 conformance vectors (manifest v0.11.2), under the stricter runner in `tools/verify.py`.
+- The §9 two-implementation independence criterion is open, not met (see README.md, Status): this
+  implementation and the standard's other existing one were both authored within the same
+  AI-assisted project; conformance here is checked against the published vectors, which is not
+  the same claim as independence.
 
 ## Provenance
 The code and documentation are written with Loomground agents. The maintainer reads and corrects all of it.
