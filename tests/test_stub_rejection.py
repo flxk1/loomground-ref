@@ -182,6 +182,37 @@ with _patched(project=_missing_key_project):
           after < total, f"{after}/{total}")
 
 
+# --------------------------------------------------- stub 6: nondeterministic evaluate
+_real_evaluate = L.evaluate
+_flip = {"n": 0}
+
+
+def _nondeterministic_evaluate(patch, activations):
+    results, log = _real_evaluate(patch, activations)
+    _flip["n"] += 1
+    if _flip["n"] % 2 == 0 and log:
+        # every other call reverses the log trace — same per-gate verdicts and
+        # master decisions, but a different order, which a determinism vector
+        # (repeat + permutations) MUST catch
+        log = list(reversed(log))
+    return results, log
+
+
+determinism_names = {v["name"] for v in MANIFEST["vectors"] if v["kind"] == "determinism"}
+if determinism_names:
+    with _patched(evaluate=_nondeterministic_evaluate):
+        after, _, fails_by_kind = score()
+        print(f"stub nondeterministic-evaluate (flips log order every other call): {after}/{total}")
+        check("nondeterministic-evaluate stub fails the stricter runner (scores below total)",
+              after < total, f"{after}/{total}")
+        still_passing = determinism_names - set(fails_by_kind)
+        check("nondeterministic-evaluate stub fails every determinism vector",
+              not still_passing, f"unexpectedly still passing: {sorted(still_passing)}")
+else:
+    check("determinism vectors present to exercise the nondeterminism stub", False,
+          "manifest declares no determinism-kind vector")
+
+
 # -------------------------------------------------------------- final (after) baseline unaffected
 final, _, _ = score()
 check("the real implementation is unaffected after every stub's context exits",
