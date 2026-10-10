@@ -1,6 +1,6 @@
 # loomground-ref
 
-> Stdlib-only reference implementation of the Loomground language; spec 0.10.0, 69/69 conformance vectors against standard 0.11.2.
+> Stdlib-only reference implementation of the Loomground language; spec 0.11.2, 75/75 conformance vectors against standard 0.11.2.
 
 ## Problem
 A specification with one implementation is that implementation's behaviour. A second, stdlib-only implementation passing all vectors is a conformance check; see README.md, Status, on what it is not yet.
@@ -14,7 +14,7 @@ A specification with one implementation is that implementation's behaviour. A se
 ```
 git clone --depth 1 https://github.com/flxk1/loomground-governance /tmp/loomground-governance
 export LOOMGROUND_ROOT=/tmp/loomground-governance/standard
-python3 tools/verify.py                    # 69/69 vectors pass
+python3 tools/verify.py                    # 75/75 vectors pass
 python3 tests/test_machine_readable.py     # 49/49 checks pass; needs jsonschema
 ```
 

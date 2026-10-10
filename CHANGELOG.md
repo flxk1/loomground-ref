@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Version label corrected: this repository claimed "spec 0.10.0" in
+  `README.md`, `llms.txt`, `loomground.py`'s module docstring, and
+  `docs/provenance.md` while actually passing the standard's manifest v0.11.2
+  (75/75 vectors) — the stale "69/69" vector count in `llms.txt` was fixed
+  the same way. The version label and vector count now name the spec
+  version this implementation actually passes.
 - `tools/verify.py`: rule 2 (an exception is a correct rejection only for a
   vector whose declared stage matches) is now enforced for apply-stage
   negative vectors too. Previously `run_negative` called `L.check(L.parse(text))`
