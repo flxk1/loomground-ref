@@ -128,8 +128,11 @@ def run_negative(d):
     # rule 2: for an apply-stage vector, L.parse() is called on its own and MUST
     # succeed; any exception raised inside parse() fails the vector whatever
     # stage it reports — a parse-time exception is only a correct rejection for
-    # a vector whose declared stage is parse. A parse-stage vector is checked
-    # entirely at this step.
+    # a vector whose declared stage is parse. A parse-stage vector is usually
+    # decided here (parse() raises and the stage/reason match); if its input
+    # unexpectedly survives parse() instead, it falls through to the same
+    # check() call below, which still fails it (stage "apply" != "parse", or
+    # accepted outright).
     try:
         patch = L.parse(text)
     except L.Reject as e:
@@ -195,6 +198,11 @@ def run_determinism(d):
             diff = whole_eq(res.get(g, {}), w, f"{label} {g}")
             if diff:
                 return f"FAIL determinism: {diff}"
+        # a gate observed in `res` but not declared in `expected` is also a
+        # whole-observation failure (mirrors run_patch's extra_gates check)
+        extra_gates = set(res) - set(want_res)
+        if extra_gates:
+            return f"FAIL determinism: {label} observed verdict(s) for undeclared gate(s) {sorted(extra_gates)}"
         if log != want_log:
             return (f"FAIL determinism: {label} log trace\n  got : {json.dumps(log)}"
                     f"\n  want: {json.dumps(want_log)}")
@@ -213,6 +221,9 @@ def run_determinism(d):
             diff = whole_eq(res.get(g, {}), w, f"{label} {g}")
             if diff:
                 return f"FAIL determinism: {diff}"
+        extra_gates = set(res) - set(want_res)
+        if extra_gates:
+            return f"FAIL determinism: {label} observed verdict(s) for undeclared gate(s) {sorted(extra_gates)}"
         want_perm_log = perm["log"]
         if log != want_perm_log:
             return (f"FAIL determinism: {label} log trace\n  got : {json.dumps(log)}"

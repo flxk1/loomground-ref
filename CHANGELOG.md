@@ -9,15 +9,23 @@
   `stage="apply"` could pass an apply-stage vector by accident. `parse()` is
   now called on its own first and required to succeed before `check()` runs;
   any exception from that standalone `parse()` call fails an apply-stage
-  vector regardless of the stage it reports. Added `tests/test_stub_rejection.py`
-  stub 7 (`parse-runs-check-reraise`) to exercise this.
+  vector regardless of the stage it reports. A parse-stage vector is usually
+  decided by that same `parse()` call; if its input unexpectedly survives
+  parsing instead, it falls through to the following `check()` call, which
+  still fails it (wrong stage, or accepted outright). Added
+  `tests/test_stub_rejection.py` stub 7 (`parse-runs-check-reraise`) to
+  exercise this.
 - `tools/verify.py`: `run_determinism` updated for the revised SPEC §7.5
   `permutations` format, where each entry is a `{"file", "log"}` pair rather
   than a bare filename — a cord reorder is checked against the same
   `expected` per-gate verdicts/master decisions, but against that permutation
   entry's own declared `log` (equal to the top-level log only when the
   activated gates still admit a single topological order, else the §7.4
-  declaration-order tie-break for that file).
+  declaration-order tie-break for that file). Both the `repeat` loop and the
+  `permutations` loop now also fail on an observed verdict for a gate not
+  named in `expected` (mirrors `run_patch`'s `extra_gates` check); added a
+  stub test (`evaluate` adding an undeclared gate's verdict) that must fail
+  both determinism vectors.
 - Verified against loomground conformance manifest v0.11.2: 75/75 vectors
   (was 74/74; the manifest gained a second determinism vector,
   `determinism-topo-tie`).
