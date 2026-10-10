@@ -9,12 +9,17 @@
   `stage="apply"` could pass an apply-stage vector by accident. `parse()` is
   now called on its own first and required to succeed before `check()` runs;
   any exception from that standalone `parse()` call fails an apply-stage
-  vector regardless of the stage it reports. A parse-stage vector is usually
-  decided by that same `parse()` call; if its input unexpectedly survives
-  parsing instead, it falls through to the following `check()` call, which
-  still fails it (wrong stage, or accepted outright). Added
-  `tests/test_stub_rejection.py` stub 7 (`parse-runs-check-reraise`) to
-  exercise this.
+  vector regardless of the stage it reports. Rule 2 is symmetric: a
+  parse-stage vector's rejection MUST come from that same standalone `parse()`
+  call too — if its input survives `parse()` (no exception raised at all),
+  the vector fails right there, without ever calling `check()`. A lenient
+  `parse()` that never rejects, paired with a `check()` that re-raises
+  `Reject("parse", <the right reason>)` to paper over the gap, would
+  otherwise score a pass — falling through to `check()` is exactly the hole
+  that lets it. Added `tests/test_stub_rejection.py` stub 7
+  (`parse-runs-check-reraise`, the apply-stage direction) and stub 9
+  (`lenient-parse-check-reraises-parse-stage`, this parse-stage direction) to
+  exercise both.
 - `tools/verify.py`: `run_determinism` updated for the revised SPEC §7.5
   `permutations` format, where each entry is a `{"file", "log"}` pair rather
   than a bare filename — a cord reorder is checked against the same
