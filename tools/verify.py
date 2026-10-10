@@ -125,14 +125,15 @@ def run_negative(d):
     want_stage = reject["stage"]
     want_reason = reject.get("reason")
     text = open(input_path(d)).read()
-    # rule 2: for an apply-stage vector, L.parse() is called on its own and MUST
-    # succeed; any exception raised inside parse() fails the vector whatever
-    # stage it reports — a parse-time exception is only a correct rejection for
-    # a vector whose declared stage is parse. A parse-stage vector is usually
-    # decided here (parse() raises and the stage/reason match); if its input
-    # unexpectedly survives parse() instead, it falls through to the same
-    # check() call below, which still fails it (stage "apply" != "parse", or
-    # accepted outright).
+    # rule 2, both directions: for an apply-stage vector, L.parse() is called on
+    # its own and MUST succeed; any exception raised inside parse() fails the
+    # vector whatever stage it reports — a parse-time exception is only a
+    # correct rejection for a vector whose declared stage is parse. Symmetrically,
+    # a parse-stage vector's rejection MUST come from this standalone parse()
+    # call: if its input survives parse() (no exception at all), the vector
+    # fails right here, without ever calling check() — a lenient parse() that
+    # never rejects, paired with a check() that re-raises Reject("parse", ...)
+    # to paper over the gap, must not be scored a pass.
     try:
         patch = L.parse(text)
     except L.Reject as e:
@@ -149,9 +150,10 @@ def run_negative(d):
             return (f"FAIL exception inside parse() for an apply-stage vector "
                      f"(not a Reject): {type(e).__name__}: {e}")
         return f"FAIL unexpected exception (not a Reject): {type(e).__name__}: {e}"
-    # parse() succeeded: an apply-stage vector's rejection must come from check()
-    # (a parse-stage vector whose input survives parsing falls through to the
-    # same check() call, and still fails below if check() also accepts it)
+    if want_stage == "parse":
+        return "FAIL parse-stage vector survived parse() (no exception raised)"
+    # parse() succeeded and the vector is apply-stage: its rejection must come
+    # from this separate check() call
     try:
         L.check(patch)
     except L.Reject as e:

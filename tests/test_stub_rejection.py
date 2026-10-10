@@ -282,6 +282,56 @@ else:
           "manifest declares no determinism-kind vector")
 
 
+# --------------------------------------------------- stub 9: lenient parse + check re-raises stage=parse
+# The symmetric half of rule 2: a parse() that never raises (it swallows the
+# real parse()'s Reject and hands back an empty, vacuously well-formed patch
+# instead) paired with a check() that re-raises the real parse()'s own
+# Reject(stage="parse", reason) it captured — reporting the correct stage AND
+# the correct reason. Before this fix, run_negative let a parse-stage vector
+# whose input survived parse() fall through to check(); here check() raises
+# with the right stage and reason, so the lenient combination scored a pass.
+# The fix requires a parse-stage vector's rejection to come from the
+# standalone parse() call itself — surviving parse() is a FAIL regardless of
+# what any later check() does — so this stub must fail every parse-stage
+# negative vector.
+_real_parse_for_stub9 = L.parse
+_captured_stub9 = {"reject": None}
+
+
+def _lenient_parse(text):
+    # overwrite (not merge) on every call, so a vector whose own parse()
+    # survives never sees a stale capture left over from an earlier vector
+    # whose rejection this stub swallowed instead of raising
+    try:
+        p = _real_parse_for_stub9(text)
+        _captured_stub9["reject"] = None
+        return p
+    except L.Reject as e:
+        _captured_stub9["reject"] = e
+        return L.Patch()  # never raises — vacuously well-formed, whatever the input
+
+
+def _check_reraises_captured(patch):
+    e = _captured_stub9["reject"]
+    if e is not None:
+        raise L.Reject(e.stage, e.reason, f"stub: check() re-raises what parse() captured: {e}")
+    return _real_check_for_stub7(patch)
+
+
+with _patched(parse=_lenient_parse, check=_check_reraises_captured):
+    after, _, fails_by_kind = score()
+    print(f"stub lenient-parse-check-reraises-parse-stage "
+          f"(parse() never raises; check() re-raises the real stage=parse reject): {after}/{total}")
+    check("lenient-parse-check-reraises-parse-stage stub fails the stricter runner (scores below total)",
+          after < total, f"{after}/{total}")
+    parse_stage_negatives_stub9 = {v["name"] for v in MANIFEST["vectors"]
+                                    if v["kind"] == "negative" and v.get("stage") == "parse"}
+    still_passing = parse_stage_negatives_stub9 - set(fails_by_kind)
+    check("lenient-parse-check-reraises-parse-stage stub fails every parse-stage negative vector "
+          "(survived parse(), rule 2)",
+          not still_passing, f"unexpectedly still passing: {sorted(still_passing)}")
+
+
 # -------------------------------------------------------------- final (after) baseline unaffected
 final, _, _ = score()
 check("the real implementation is unaffected after every stub's context exits",
