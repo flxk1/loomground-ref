@@ -3,7 +3,7 @@
 > Stdlib-only reference implementation of the Loomground language; spec 0.10.0, 69/69 conformance vectors against standard 0.11.2.
 
 ## Problem
-A specification with one implementation is that implementation's behaviour. A second, independent, stdlib-only implementation passing all vectors.
+A specification with one implementation is that implementation's behaviour. A second, stdlib-only implementation passing all vectors is a conformance check; see README.md, Status, on what it is not yet.
 
 ## Read
 - `loomground.py` — parse, apply-stage check, projection, token validator, evaluator.
@@ -27,6 +27,6 @@ python3 tests/test_machine_readable.py     # 49/49 checks pass; needs jsonschema
 | output | one PASS/FAIL line per vector; exit status 1 on any failure |
 
 ## Family
-Independent reference implementation. Consumes: loomground-governance `standard/` (spec, grammar, schema, vocabulary, conformance vectors) · consumed by the standard's implementation-independence checks · pipeline position: outside the reasoning pipeline. Implemented from the specification text without importing another evaluator. Provenance: `docs/provenance.md`.
+A reference implementation. Consumes: loomground-governance `standard/` (spec, grammar, schema, vocabulary, conformance vectors) · pipeline position: outside the reasoning pipeline. Implemented from the specification text without importing another evaluator. Provenance: `docs/provenance.md`.
 
 Language: loomground — guide https://github.com/flxk1/loomground/blob/main/llms.txt (the .lg language an agent reads, emits, validates); catalogue https://github.com/flxk1/loomground/blob/main/CATALOGUE.json
