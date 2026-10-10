@@ -6,7 +6,7 @@ from another evaluator. It is not a claim of §9 two-implementation independence
 open (README.md, Status).
 
 Stdlib-only reference implementation of the Loomground language
-(spec v0.10.0). A host that realises the standard's semantics so its conformance
+(spec v0.11.2). A host that realises the standard's semantics so its conformance
 vectors are machine-verifiable. Not part of the standard
 (github.com/flxk1/loomground).
 

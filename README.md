@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # loomground-ref
 
-Stdlib-only reference implementation of the Loomground language; spec 0.10.0, 75/75 conformance vectors against the standard's manifest v0.11.2, under the stricter runner (reason-checked negatives, whole-observation equality, determinism vectors executed; see `tools/verify.py`).
+Stdlib-only reference implementation of the Loomground language; spec 0.11.2, 75/75 conformance vectors against the standard's manifest v0.11.2, under the stricter runner (reason-checked negatives, whole-observation equality, determinism vectors executed; see `tools/verify.py`).
 
 ## Problem
 A specification with one implementation is that implementation's behaviour. A second, stdlib-only implementation passing all vectors is a conformance check; see Status, below, on what it is not yet.
@@ -46,7 +46,7 @@ A reference implementation. Consumes: loomground's `conformance/` (spec, grammar
 
 ## Status
 
-Package 0.1.0 · implements spec 0.10.0 (`loomground.py`) · verified against loomground conformance manifest v0.11.2: 75/75 conformance vectors (40 patch · 31 negative · 2 token · 2 determinism) under the stricter runner (`tools/verify.py`) · Python >=3.10 · 0 runtime dependencies.
+Package 0.1.0 · implements spec 0.11.2 (`loomground.py`) · verified against loomground conformance manifest v0.11.2: 75/75 conformance vectors (40 patch · 31 negative · 2 token · 2 determinism) under the stricter runner (`tools/verify.py`) · Python >=3.10 · 0 runtime dependencies.
 
 The standard's own `conformance/README.md` states the §9 two-implementation
 independence criterion is **open**, not met: this repository and the

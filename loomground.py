@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 The Loomground Authors
-"""A reference implementation of the Loomground language, v0.10.0.
+"""A reference implementation of the Loomground language, v0.11.2.
 
 Stdlib-only. A *host* that realises the abstract semantics of the specification
 so the conformance vectors can be machine-verified. It is not part of the
