@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "loomground-ref"
 version = "0.1.0"
-description = "Independent, stdlib-only reference implementation of the Loomground language."
+description = "Stdlib-only reference implementation of the Loomground language."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
