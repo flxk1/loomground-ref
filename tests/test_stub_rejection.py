@@ -213,6 +213,45 @@ else:
           "manifest declares no determinism-kind vector")
 
 
+# --------------------------------------------------- stub 7: parse-runs-check-reraise (rule 2)
+# A parse() that internally runs check() and, on failure, re-raises the
+# resulting Reject as if it came from parse() itself (still reporting
+# stage="apply", the true stage of the underlying cause). Rule 2 requires the
+# stricter runner to fail an apply-stage vector on ANY exception raised inside
+# the parse() call, whatever stage that exception reports — because an
+# apply-stage vector's input is required to survive parse() on its own, with
+# the rejection coming from a separate check() call. A lenient runner that
+# only inspects `L.check(L.parse(text))` as one combined call cannot tell this
+# apart from a correctly separated parse()-then-check() and would pass these
+# apply-stage negative vectors by accident.
+_real_parse_for_stub7 = L.parse
+_real_check_for_stub7 = L.check
+
+
+def _parse_runs_check_reraise(text):
+    p = _real_parse_for_stub7(text)
+    try:
+        _real_check_for_stub7(p)
+    except L.Reject as e:
+        # the exception is raised from inside parse(), not from a later,
+        # separate check() call — even though it reports the true stage
+        raise L.Reject(e.stage, e.reason, f"stub: parse() ran check internally: {e}")
+    return p
+
+
+with _patched(parse=_parse_runs_check_reraise):
+    after, _, fails_by_kind = score()
+    print(f"stub parse-runs-check-reraise (parse() internally runs check and re-raises): {after}/{total}")
+    check("parse-runs-check-reraise stub fails the stricter runner (scores below total)",
+          after < total, f"{after}/{total}")
+    apply_stage_negatives = {v["name"] for v in MANIFEST["vectors"]
+                              if v["kind"] == "negative" and v.get("stage") == "apply"}
+    still_passing = apply_stage_negatives - set(fails_by_kind)
+    check("parse-runs-check-reraise stub fails every apply-stage negative vector "
+          "(exception inside parse(), rule 2)",
+          not still_passing, f"unexpectedly still passing: {sorted(still_passing)}")
+
+
 # -------------------------------------------------------------- final (after) baseline unaffected
 final, _, _ = score()
 check("the real implementation is unaffected after every stub's context exits",

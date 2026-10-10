@@ -27,8 +27,13 @@ contract" names four rules a lenient runner can miss, and each is checked here:
    an extra, missing, or misordered member anywhere is a failure, not a
    partial pass on named keys alone.
 4. Determinism vectors (`kind: "determinism"`) are executed: `repeat` runs
-   against `input.lg` and one run against each file in `permutations`, failing
-   on any divergence in per-gate verdicts, master decisions, or log trace.
+   against `input.lg` must agree with `expected`/`log`; one run against each
+   `permutations` entry's `file` must agree with the same `expected` (a reorder
+   keeps every per-gate verdict and the master decision) but is checked against
+   *that entry's own* `log` (SPEC §7.5) — a cord reorder may still admit only a
+   single topological order over the activated gates, in which case the log is
+   unchanged, or it may introduce a tie the host breaks by §7.4 declaration
+   order, in which case the log reflects that file's declaration order.
 """
 import json
 import os
@@ -119,10 +124,34 @@ def run_negative(d):
     reject = load(d, "reject.json")
     want_stage = reject["stage"]
     want_reason = reject.get("reason")
+    text = open(input_path(d)).read()
+    # rule 2: for an apply-stage vector, L.parse() is called on its own and MUST
+    # succeed; any exception raised inside parse() fails the vector whatever
+    # stage it reports — a parse-time exception is only a correct rejection for
+    # a vector whose declared stage is parse. A parse-stage vector is checked
+    # entirely at this step.
     try:
-        L.check(L.parse(open(input_path(d)).read()))
+        patch = L.parse(text)
     except L.Reject as e:
-        # rule 2: an exception is a correct rejection only at the declared stage
+        if want_stage != "parse":
+            return (f"FAIL exception inside parse() for an apply-stage vector "
+                     f"(reports stage {e.stage}): {e}")
+        if e.stage != want_stage:
+            return f"FAIL stage {e.stage} != {want_stage} ({e})"
+        if want_reason is not None and e.reason != want_reason:
+            return f"FAIL reason {e.reason} != {want_reason} ({e})"
+        return "pass"
+    except Exception as e:  # noqa: BLE001 — a non-Reject exception is never a pass
+        if want_stage != "parse":
+            return (f"FAIL exception inside parse() for an apply-stage vector "
+                     f"(not a Reject): {type(e).__name__}: {e}")
+        return f"FAIL unexpected exception (not a Reject): {type(e).__name__}: {e}"
+    # parse() succeeded: an apply-stage vector's rejection must come from check()
+    # (a parse-stage vector whose input survives parsing falls through to the
+    # same check() call, and still fails below if check() also accepts it)
+    try:
+        L.check(patch)
+    except L.Reject as e:
         if e.stage != want_stage:
             return f"FAIL stage {e.stage} != {want_stage} ({e})"
         # rule 1: check reason, not only stage
@@ -155,20 +184,39 @@ def run_determinism(d):
     repeat = tr["repeat"]
     permutations = tr.get("permutations", [])
     base = input_path(d)
-    want_res, want_log = {}, tr["log"]
-    for g, w in tr["expected"].items():
-        want_res[g] = w
-    runs = [("input.lg (run %d)" % i, base) for i in range(repeat)]
-    runs += [(p, os.path.join(d, p)) for p in permutations]
-    for label, path in runs:
-        res, log = _run_once(d, path, activations)
+    want_res = tr["expected"]
+    want_log = tr["log"]
+    # `repeat` runs against input.lg: per-gate verdicts, master decisions AND
+    # the log trace must all equal `expected`/`log` (rule 1 / SPEC §7.5).
+    for i in range(repeat):
+        label = f"input.lg (run {i})"
+        res, log = _run_once(d, base, activations)
         for g, w in want_res.items():
-            diff = whole_eq(res.get(g, {}), w, f"{label} run {g}")
+            diff = whole_eq(res.get(g, {}), w, f"{label} {g}")
             if diff:
                 return f"FAIL determinism: {diff}"
         if log != want_log:
             return (f"FAIL determinism: {label} log trace\n  got : {json.dumps(log)}"
                     f"\n  want: {json.dumps(want_log)}")
+    # each permutation entry is a {"file", "log"} pair (SPEC §7.5 as revised):
+    # a cord reorder keeps every per-gate verdict and the master decision
+    # (rule 2, checked against the same `expected`), but the log is that
+    # entry's OWN declared log — equal to the top-level log only when the
+    # reordered pipes still admit a single topological order over the
+    # activated gates, else it reflects that file's §7.4 declaration order
+    # (rule 3).
+    for perm in permutations:
+        label = perm["file"]
+        path = os.path.join(d, label)
+        res, log = _run_once(d, path, activations)
+        for g, w in want_res.items():
+            diff = whole_eq(res.get(g, {}), w, f"{label} {g}")
+            if diff:
+                return f"FAIL determinism: {diff}"
+        want_perm_log = perm["log"]
+        if log != want_perm_log:
+            return (f"FAIL determinism: {label} log trace\n  got : {json.dumps(log)}"
+                    f"\n  want: {json.dumps(want_perm_log)}")
     return "pass"
 
 
