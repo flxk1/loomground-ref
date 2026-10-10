@@ -24,7 +24,7 @@ python3 tools/verify.py [PATH]   # PATH = standard root, or set $LOOMGROUND_ROOT
 Zero dependencies; Python 3.10+.
 
 ## Status
-- 74/74 conformance vectors (manifest v0.11.2), under the stricter runner in `tools/verify.py`.
+- 75/75 conformance vectors (manifest v0.11.2), under the stricter runner in `tools/verify.py`.
 - The §9 two-implementation independence criterion is open, not met (see README.md, Status): this
   implementation and the standard's other existing one were both authored within the same
   AI-assisted project; conformance here is checked against the published vectors, which is not

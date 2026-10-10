@@ -4,7 +4,7 @@
 """The stricter runner (tools/verify.py) must not score a stub evaluator as
 conformant. Each stub below monkeypatches `loomground` to simulate a specific
 way a lenient runner can be fooled (conformance/README.md, the vector-format
-contract) and asserts the *stricter* runner's score drops below 74/74 — in
+contract) and asserts the *stricter* runner's score drops below 75/75 — in
 particular that it does not pass every negative vector, which a
 stage-only-no-reason runner would.
 
@@ -250,6 +250,36 @@ with _patched(parse=_parse_runs_check_reraise):
     check("parse-runs-check-reraise stub fails every apply-stage negative vector "
           "(exception inside parse(), rule 2)",
           not still_passing, f"unexpectedly still passing: {sorted(still_passing)}")
+
+
+# --------------------------------------------------- stub 8: evaluate adds an undeclared gate
+# `evaluate()` returning a verdict for a gate that `expected` does not name is
+# a whole-observation failure (mirrors run_patch's extra_gates check), and
+# must be caught in a determinism vector too — both in the `repeat` loop
+# (against input.lg) and in the `permutations` loop.
+_real_evaluate_for_stub8 = L.evaluate
+
+
+def _evaluate_adds_undeclared_gate(patch, activations):
+    results, log = _real_evaluate_for_stub8(patch, activations)
+    results = dict(results)
+    results["ZZZ_undeclared"] = {"verdict": "auto"}
+    return results, log
+
+
+determinism_names_stub8 = {v["name"] for v in MANIFEST["vectors"] if v["kind"] == "determinism"}
+if determinism_names_stub8:
+    with _patched(evaluate=_evaluate_adds_undeclared_gate):
+        after, _, fails_by_kind = score()
+        print(f"stub evaluate-adds-undeclared-gate (res gets an undeclared gate 'ZZZ_undeclared'): {after}/{total}")
+        check("evaluate-adds-undeclared-gate stub fails the stricter runner (scores below total)",
+              after < total, f"{after}/{total}")
+        still_passing = determinism_names_stub8 - set(fails_by_kind)
+        check("evaluate-adds-undeclared-gate stub fails every determinism vector",
+              not still_passing, f"unexpectedly still passing: {sorted(still_passing)}")
+else:
+    check("determinism vectors present to exercise the undeclared-gate stub", False,
+          "manifest declares no determinism-kind vector")
 
 
 # -------------------------------------------------------------- final (after) baseline unaffected
