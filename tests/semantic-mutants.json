@@ -1,0 +1,183 @@
+[
+ {
+  "mutant": "reserved-before-refused",
+  "rule": "priority step 2 before 3",
+  "score": 74,
+  "total": 75,
+  "caught_by": [
+   "refused-precedence"
+  ],
+  "gap": null
+ },
+ {
+  "mutant": "refused-before-prohibited",
+  "rule": "priority step 1 before 2",
+  "score": 74,
+  "total": 75,
+  "caught_by": [
+   "refused-precedence"
+  ],
+  "gap": null
+ },
+ {
+  "mutant": "grade-clears-reservation",
+  "rule": "reservation independent of the actor",
+  "score": 73,
+  "total": 75,
+  "caught_by": [
+   "grade-reserved-precedence",
+   "reserve-grant-independence"
+  ],
+  "gap": null
+ },
+ {
+  "mutant": "ungraded-actor-auto",
+  "rule": "ungraded actor fails closed",
+  "score": 74,
+  "total": 75,
+  "caught_by": [
+   "grade-ungraded-at-graded"
+  ],
+  "gap": null
+ },
+ {
+  "mutant": "no-authority-downstream",
+  "rule": "authority checked at every gate",
+  "score": 71,
+  "total": 75,
+  "caught_by": [
+   "pipe-authority-downstream",
+   "topo-fanout-fanin-declared-order",
+   "topo-fanout-fanin-declared-order-variant",
+   "determinism-topo-tie"
+  ],
+  "gap": null
+ },
+ {
+  "mutant": "risk-floor-ignored",
+  "rule": "gate floor raises the effective risk",
+  "score": 74,
+  "total": 75,
+  "caught_by": [
+   "record-declared-and-observed"
+  ],
+  "gap": null
+ },
+ {
+  "mutant": "guard-ge-as-eq",
+  "rule": "`>=` guard on an ordered property",
+  "score": 75,
+  "total": 75,
+  "caught_by": [],
+  "gap": "no vector runs a token above a `risk >=` guard's threshold (every run that hits one does so at the threshold value), so `>=` and `=` are not told apart at evaluation; a run with a critical token against `risk >= high` would close it"
+ },
+ {
+  "mutant": "grant-risk-unnarrowed",
+  "rule": "grant narrowed to risk levels",
+  "score": 73,
+  "total": 75,
+  "caught_by": [
+   "grant-narrowing",
+   "reject-delegation-risk-amplify"
+  ],
+  "gap": null
+ },
+ {
+  "mutant": "join-least-restrictive",
+  "rule": "join is the maximum on the chain",
+  "score": 70,
+  "total": 75,
+  "caught_by": [
+   "grade-join",
+   "pipe-authority-downstream",
+   "topo-fanout-fanin-declared-order",
+   "topo-fanout-fanin-declared-order-variant",
+   "determinism-topo-tie"
+  ],
+  "gap": null
+ },
+ {
+  "mutant": "release-on-human",
+  "rule": "only `auto` releases",
+  "score": 72,
+  "total": 75,
+  "caught_by": [
+   "grade-human",
+   "grade-ungraded-at-graded",
+   "grade-join"
+  ],
+  "gap": null
+ },
+ {
+  "mutant": "log-by-name",
+  "rule": "tie-break by declaration order",
+  "score": 68,
+  "total": 75,
+  "caught_by": [
+   "draft-decide-run",
+   "grade-join",
+   "guard-reversibility",
+   "guard-uncertainty",
+   "topo-fanout-fanin-declared-order-variant",
+   "determinism-repeat-permute",
+   "determinism-topo-tie"
+  ],
+  "gap": null
+ },
+ {
+  "mutant": "invalid-token-evaluated",
+  "rule": "invalid token denotes \u22a5",
+  "score": 71,
+  "total": 75,
+  "caught_by": [
+   "token-validation",
+   "risk-enum-values",
+   "transport-invalid-token",
+   "transport-invalid-token-only"
+  ],
+  "gap": null
+ },
+ {
+  "mutant": "grade-amplification-allowed",
+  "rule": "no-amplification over grade",
+  "score": 73,
+  "total": 75,
+  "caught_by": [
+   "reject-delegation-grade-amplify",
+   "reject-delegation-grade-from-nothing"
+  ],
+  "gap": null
+ },
+ {
+  "mutant": "risk-amplification-allowed",
+  "rule": "no-amplification over granted risk",
+  "score": 73,
+  "total": 75,
+  "caught_by": [
+   "reject-delegation-risk-amplify",
+   "reject-delegation-ungranted-delegator"
+  ],
+  "gap": null
+ },
+ {
+  "mutant": "mandate-widening-allowed",
+  "rule": "mandate attenuation along delegation",
+  "score": 73,
+  "total": 75,
+  "caught_by": [
+   "reject-mandate-widen",
+   "reject-mandate-from-nothing"
+  ],
+  "gap": null
+ },
+ {
+  "mutant": "obo-cycle-allowed",
+  "rule": "acyclic on-behalf-of",
+  "score": 74,
+  "total": 75,
+  "caught_by": [
+   "reject-obo-cycle"
+  ],
+  "gap": null
+ }
+]
