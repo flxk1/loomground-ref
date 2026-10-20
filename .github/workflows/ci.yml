@@ -32,6 +32,10 @@ jobs:
         run: LOOMGROUND_ROOT=/tmp/loomground python3 tools/verify.py
       - name: machine-readable layer cross-checks
         run: LOOMGROUND_ROOT=/tmp/loomground python3 tests/test_machine_readable.py
+      - name: stub evaluators score below the total
+        run: LOOMGROUND_ROOT=/tmp/loomground python3 tests/test_stub_rejection.py
+      - name: semantic mutants score below the total
+        run: LOOMGROUND_ROOT=/tmp/loomground python3 tests/test_semantic_mutants.py
 
   commit-discipline:
     runs-on: ubuntu-latest
