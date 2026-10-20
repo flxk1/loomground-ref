@@ -184,14 +184,18 @@ MUTANTS = [
 ]
 
 # A mutant the suite does not catch is a gap in the suite, recorded here with
-# the vector that would close it. A listed survivor that becomes caught, or an
-# unlisted one that survives, fails this test, so the list cannot go stale.
-KNOWN_SURVIVORS = {
-    "guard-ge-as-eq": "no vector runs a token above a `risk >=` guard's threshold "
-                      "(every run that hits one does so at the threshold value), so "
-                      "`>=` and `=` are not told apart at evaluation; a run with a "
-                      "critical token against `risk >= high` would close it",
+# the vector that closes it. The record holds exactly while that vector is
+# absent from the standard under test: a listed survivor that becomes caught,
+# or an unlisted one that survives, fails this test, so the list cannot go stale.
+_GAPS = {
+    "guard-ge-as-eq": ("guard-risk-above-threshold",
+                       "no vector runs a token above a `risk >=` guard's threshold "
+                       "(every run that hits one does so at the threshold value), so "
+                       "`>=` and `=` are not told apart at evaluation"),
 }
+_present = {v["name"] for v in MANIFEST["vectors"]}
+KNOWN_SURVIVORS = {m: f"{why}; closed by `{vec}`, absent at manifest {MANIFEST.get('version')}"
+                   for m, (vec, why) in _GAPS.items() if vec not in _present}
 
 fails = []
 before, _ = score()
