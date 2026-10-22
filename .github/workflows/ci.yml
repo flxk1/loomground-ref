@@ -1,6 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 flxk1
 name: ci
+
+env:
+  NEUTRALITY_PATTERN: ${{ vars.NEUTRALITY_PATTERN }}
 on:
   push:
   pull_request:
@@ -56,7 +59,8 @@ jobs:
           fi
           bad=0
           git log --no-merges --format='%s' $range | awk 'length($0)>72 {print "subject >72 chars: " $0; bad=1} END {exit bad}' || bad=1
-          if git log --no-merges --format='%(trailers)' $range | grep -iE '^Co-Authored-By:'; then
+          [ -n "$NEUTRALITY_PATTERN" ] || { echo "NEUTRALITY_PATTERN repository variable is not set"; exit 1; }
+          if git log --no-merges --format='%(trailers)' $range | grep -iE "^Co-Authored-By:.*($NEUTRALITY_PATTERN)"; then
             echo "AI co-author trailer found — use the assisted line instead"; bad=1
           fi
           exit $bad
@@ -67,10 +71,11 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
       - name: prose and language surfaces are tool- and vendor-neutral
         run: |
-          # Functional paths such as .claude-plugin/ are identifiers the tooling needs, not prose.
+          # dot-plugin directories are functional paths the tooling needs, not prose.
+          [ -n "$NEUTRALITY_PATTERN" ] || { echo "NEUTRALITY_PATTERN repository variable is not set"; exit 1; }
           hits=$(grep -rniE "$NEUTRALITY_PATTERN" \
                README.md llms.txt CHANGELOG.md docs loomground.py tools \
-               --exclude-dir=__pycache__ 2>/dev/null | grep -v '\.claude-plugin/' || true)
+               --exclude-dir=__pycache__ 2>/dev/null | grep -vE '\.[a-z]+-plugin/' || true)
           if [ -n "$hits" ]; then
             echo "$hits"
             echo "vendor/model/framework name found in a prose or language surface"; exit 1
